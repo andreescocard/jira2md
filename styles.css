@@ -1,0 +1,150 @@
+/* Jira2Markdown Button Style */
+.jira-md-export-button {
+    background-color: #0052CC;
+    color: white !important;
+    border: none;
+    border-radius: 10px;
+    padding: 6px 10px;
+    height: 32px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+    z-index: 9999;
+    vertical-align: middle;
+}
+
+.jira-md-export-button:hover {
+    background-color: #0065FF;
+}
+
+.jira-md-export-button:active {
+    background-color: #0747A6;
+}
+
+/* Modal Editor Styles */
+#j2m-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#j2m-modal-container {
+    background: white;
+    width: 90%;
+    height: 85%;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+#j2m-modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #dfe1e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f4f5f7;
+}
+
+#j2m-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #172b4d;
+}
+
+#j2m-modal-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+#j2m-editor-pane, #j2m-preview-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    overflow: hidden;
+}
+
+#j2m-editor-pane {
+    border-right: 1px solid #dfe1e6;
+}
+
+#j2m-markdown-input {
+    flex: 1;
+    width: 100%;
+    border: 1px solid #dfe1e6;
+    border-radius: 3px;
+    padding: 12px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 14px;
+    resize: none;
+    outline: none;
+}
+
+#j2m-markdown-input:focus {
+    border-color: #4c9aff;
+}
+
+#j2m-preview-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid #f4f5f7;
+    background: #fff;
+    line-height: 1.6;
+}
+
+#j2m-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #dfe1e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f4f5f7;
+}
+
+.j2m-btn {
+    padding: 8px 16px;
+    border-radius: 3px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+}
+
+.j2m-btn-primary {
+    background: #0052cc;
+    color: white;
+}
+
+.j2m-btn-primary:hover { background: #0065ff; }
+
+.j2m-btn-secondary {
+    background: #ebecf0;
+    color: #42526e;
+}
+
+.j2m-btn-secondary:hover { background: #dfe1e6; }
+
+/* Simple Preview Styles */
+#j2m-preview-content h1 { border-bottom: 1px solid #eee; padding-bottom: 8px; }
+#j2m-preview-content pre { background: #f4f5f7; padding: 12px; border-radius: 3px; overflow-x: auto; }
+#j2m-preview-content code { font-family: monospace; background: #f4f5f7; padding: 2px 4px; }
+#j2m-preview-content table { border-collapse: collapse; width: 100%; }
+#j2m-preview-content th, #j2m-preview-content td { border: 1px solid #dfe1e6; padding: 8px; }

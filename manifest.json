@@ -4,7 +4,7 @@
    },
    "content_scripts": [ {
       "css": [ "styles.css" ],
-      "js": [ "libs/jszip.min.js", "libs/turndown.js", "libs/turndown-plugin-gfm.js", "content.js" ],
+      "js": [ "libs/jszip.min.js", "libs/turndown.js", "libs/turndown-plugin-gfm.js", "content.js", "relay-client.js" ],
       "matches": [ "*://*.atlassian.net/browse/*" ]
    } ],
    "description": "Export Jira issues to Markdown in one click — modal editor, live preview & ZIP bundling.",

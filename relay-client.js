@@ -2,11 +2,69 @@
  * relay-client.js — injected alongside content.js.
  * Restructures modal layout, adds icons, Copy button, Send to Claude Code.
  * Communicates with relay.js running in VS Code terminal.
+ *
+ * CHECKBOX FIX STRATEGY
+ * content.js reads the description via element.innerText which discards all
+ * checkbox state. The fix works at the source: before content.js calls
+ * innerText we inject plain text markers ("- [x] " / "- [ ] ") directly into
+ * the Jira DOM as text nodes next to each checkbox widget. innerText then
+ * picks them up naturally. We remove the injected nodes after the modal opens.
  */
 
 (function () {
   const RELAY_PORT = 7337;
   const RELAY_URL  = `http://127.0.0.1:${RELAY_PORT}`;
+
+  // Holds text nodes injected into the Jira DOM; cleaned up after modal opens
+  let _injectedMarkers = [];
+
+  // ── Checkbox DOM injection ────────────────────────────────────────────────
+
+  function injectCheckboxMarkers() {
+    _injectedMarkers = [];
+
+    // All checkboxes on the page that are NOT inside our own modal
+    const overlay = document.getElementById('j2m-modal-overlay');
+    const all = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+    const checkboxes = all.filter(cb => !overlay || !overlay.contains(cb));
+
+    checkboxes.forEach(cb => {
+      const checked = cb.checked || cb.hasAttribute('checked');
+      const marker  = document.createTextNode(checked ? '- [x] ' : '- [ ] ');
+
+      // The checkbox lives inside <span contenteditable="false">.
+      // Insert the text node BEFORE that widget so innerText picks it up.
+      const widget = cb.closest('[contenteditable="false"]') || cb.parentElement;
+      const parent = widget && widget.parentElement;
+      if (!parent) return;
+
+      parent.insertBefore(marker, widget);
+      _injectedMarkers.push(marker);
+    });
+  }
+
+  function removeInjectedMarkers() {
+    _injectedMarkers.forEach(n => { if (n.parentNode) n.parentNode.removeChild(n); });
+    _injectedMarkers = [];
+  }
+
+  // ── Intercept export button ───────────────────────────────────────────────
+  // Wrap content.js's onclick so we inject markers just before it reads
+  // innerText, and schedule cleanup after the modal has been created.
+
+  function interceptExportButton() {
+    const btn = document.getElementById('jira-to-md-btn');
+    if (!btn || btn._j2mPatched) return;
+    btn._j2mPatched = true;
+
+    const orig = btn.onclick;
+    btn.onclick = function (e) {
+      injectCheckboxMarkers();
+      if (orig) orig.call(this, e);
+      // Fallback cleanup in case modal never opens (e.g. error in content.js)
+      setTimeout(removeInjectedMarkers, 5000);
+    };
+  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -141,102 +199,27 @@
     document.head.appendChild(s);
   }
 
-  // ── Fix task list checkboxes ──────────────────────────────────────────────
-  // content.js only runs Turndown when description has tables/code.
-  // Otherwise it falls back to innerText — checkboxes lost.
-  // Post-process: read checked state from Jira DOM, patch textarea lines.
-  // Called on modal open AND before every export action.
-
-  function fixTaskLists(modal) {
-    const textarea = modal.querySelector('#j2m-markdown-input');
-    if (!textarea) return;
-
-    // Scope to description area only — same selectors content.js uses
-    const descRoot =
-      document.querySelector('[data-testid="issue.views.field.rich-text.description"] .ak-renderer-document') ||
-      document.querySelector('[data-testid="issue.views.field.rich-text.description"]') ||
-      document.querySelector('.ak-renderer-document') ||
-      document.querySelector('[contenteditable="true"]');
-
-    if (!descRoot) return;
-
-    // Jira Cloud new UI: checkboxes are <input type="checkbox"> inside
-    // <span contenteditable="false"> — not <li data-task-list-item>
-    const checkboxes = descRoot.querySelectorAll('input[type="checkbox"]');
-    if (!checkboxes.length) return;
-
-    let md = textarea.value;
-    let changed = false;
-
-    checkboxes.forEach(checkbox => {
-      const checked = checkbox.checked || checkbox.hasAttribute('checked');
-
-      // Walk up to the nearest <li> or <p> to get the full task item
-      let item = checkbox.parentElement;
-      while (item && item !== descRoot) {
-        const tag = item.tagName;
-        if (tag === 'LI' || tag === 'P') break;
-        item = item.parentElement;
-      }
-      if (!item || item === descRoot) return;
-
-      // Clone and strip: remove checkbox widget + aria-hidden SVG spans
-      const clone = item.cloneNode(true);
-      clone.querySelectorAll('[contenteditable="false"]').forEach(el => el.remove());
-      clone.querySelectorAll('[aria-hidden="true"]').forEach(el => el.remove());
-      clone.querySelectorAll('input').forEach(el => el.remove());
-
-      const rawText = (clone.textContent || '').trim().replace(/\s+/g, ' ');
-      if (!rawText) return;
-
-      const prefix = checked ? '- [x] ' : '- [ ] ';
-      const esc = rawText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-      // Match line with or without existing bullet/checkbox prefix
-      const re = new RegExp(
-        '^[ \\t]*(?:[-*+][ \\t]+(?:\\[[ xX]\\][ \\t]+)?)?' + esc + '[ \\t]*$',
-        'mi'
-      );
-
-      if (re.test(md)) {
-        md = md.replace(re, prefix + rawText);
-        changed = true;
-      }
-    });
-
-    if (changed) {
-      textarea.value = md;
-      textarea.dispatchEvent(new Event('input'));
-    }
-  }
-
   // ── Reshape modal header ──────────────────────────────────────────────────
 
   function reshapeHeader(modal, meta) {
     const header = modal.querySelector('#j2m-modal-header');
     if (!header || header.querySelector('#j2m-header-icon')) return;
 
-    // 📤 icon
     const icon = document.createElement('span');
     icon.id = 'j2m-header-icon';
     icon.setAttribute('aria-hidden', 'true');
     icon.textContent = '📤';
     header.insertBefore(icon, header.firstChild);
 
-    // Rewrite h2: "ScalaSearch - PLATF-2398"
     const h2 = header.querySelector('h2');
     if (h2) {
       h2.textContent = '';
       h2.appendChild(document.createTextNode(meta.title + ' — ' + meta.key));
     }
 
-    // Hide original "Editing: ..." subtitle span
     const subtitle = header.querySelector('span');
-    if (subtitle) {
-      subtitle.id = 'j2m-header-subtitle';
-    }
+    if (subtitle) subtitle.id = 'j2m-header-subtitle';
 
-    // X close button
     const closeBtn = document.createElement('button');
     closeBtn.id = 'j2m-btn-close';
     closeBtn.setAttribute('aria-label', 'Close');
@@ -253,9 +236,11 @@
   function restructureModal(modal, getMarkdown, meta) {
     if (modal.querySelector('#j2m-button-column')) return;
 
+    // Markers have been read by content.js — safe to remove now
+    removeInjectedMarkers();
+
     injectStyles();
     reshapeHeader(modal, meta);
-    fixTaskLists(modal);
 
     const footer    = modal.querySelector('#j2m-modal-footer');
     const body      = modal.querySelector('#j2m-modal-body');
@@ -267,23 +252,12 @@
     if (mdBtn)     setLabel(mdBtn,     '⬇', 'Download .md');
     if (zipBtn)    setLabel(zipBtn,    '📦', 'Download .zip');
 
-    // Wrap existing download button handlers to re-apply fix before firing
-    [mdBtn, zipBtn].forEach(btn => {
-      if (!btn) return;
-      const orig = btn.onclick;
-      btn.onclick = function (e) {
-        fixTaskLists(modal);
-        if (orig) orig.call(this, e);
-      };
-    });
-
     // Copy button
     const copyBtn = document.createElement('button');
     copyBtn.id = 'j2m-btn-copy';
     copyBtn.className = 'j2m-btn j2m-btn-secondary';
     setLabel(copyBtn, '📋', 'Copy to Clipboard');
     copyBtn.onclick = async () => {
-      fixTaskLists(modal);
       try {
         await navigator.clipboard.writeText(getMarkdown());
         setLabel(copyBtn, '✓', 'Copied!');
@@ -300,7 +274,6 @@
     claudeBtn.className = 'j2m-btn';
     setLabel(claudeBtn, '🟠', 'Send to Claude Code');
     claudeBtn.onclick = async () => {
-      fixTaskLists(modal);
       setLabel(claudeBtn, '⏳', 'Sending…');
       claudeBtn.disabled = true;
       const safe = meta.title.replace(/[/\\?%*:|"<>]/g, '-').slice(0, 60);
@@ -337,7 +310,6 @@
 
     const col = document.createElement('div');
     col.id = 'j2m-button-column';
-
     col.appendChild(claudeBtn);
 
     const divider = document.createElement('div');
@@ -357,15 +329,21 @@
     body.appendChild(col);
   }
 
-  // ── Observer ──────────────────────────────────────────────────────────────
+  // ── Observer — watches for button + modal ─────────────────────────────────
 
   const observer = new MutationObserver(() => {
+    // Intercept the export button as soon as content.js creates it
+    interceptExportButton();
+
     const modal = document.getElementById('j2m-modal-overlay');
     if (!modal) return;
+
     const getMarkdown = () => {
       const ta = modal.querySelector('#j2m-markdown-input');
       return ta ? ta.value : '';
     };
+
+    // Read meta from original content.js header text before we rewrite it
     const keyEl    = modal.querySelector('#j2m-modal-header h2');
     const titleEl  = modal.querySelector('#j2m-modal-header span');
     const keyMatch = keyEl && keyEl.textContent.match(/([A-Z]+-\d+)/);
@@ -373,6 +351,7 @@
       key:   keyMatch ? keyMatch[1] : 'ISSUE',
       title: titleEl  ? titleEl.textContent.replace('Editing: ', '').trim() : 'issue',
     };
+
     restructureModal(modal, getMarkdown, meta);
   });
 

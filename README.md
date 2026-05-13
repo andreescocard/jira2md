@@ -81,11 +81,51 @@ Just a practical thing for when you need:
 
 ## Installation
 
-1. Download or clone this repository
-2. Open Chrome → `chrome://extensions`
-3. Enable **Developer mode** (top-right toggle)
-4. Click **Load unpacked** → select the project folder
-5. Navigate to any Jira issue (`*.atlassian.net/browse/*`) — the button appears
+jira2md is a **developer-mode Chrome extension** — it is not on the Chrome Web Store. You load it directly from the folder.
+
+### Step-by-step
+
+**1. Get the files**
+
+Option A — Clone with Git:
+```bash
+git clone https://github.com/andreescocard/jira2md.git
+```
+
+Option B — Download ZIP:  
+Go to the repository page → click **Code** → **Download ZIP** → extract the folder anywhere on your computer.
+
+**2. Open Chrome Extensions**
+
+In your Chrome address bar, type:
+```
+chrome://extensions
+```
+and press Enter.
+
+**3. Enable Developer Mode**
+
+In the top-right corner of the Extensions page, toggle **Developer mode** ON.  
+You will see three new buttons appear: *Load unpacked*, *Pack extension*, *Update*.
+
+**4. Load the extension**
+
+Click **Load unpacked** → navigate to and select the `jira2md` folder (the one that contains `manifest.json`).  
+The extension appears in your list with the name **jira2md**.
+
+**5. Pin it to your toolbar** *(optional but recommended)*
+
+Click the puzzle-piece icon 🧩 in Chrome's toolbar → find **jira2md** → click the pin icon 📌.  
+The jira2md icon will stay visible in your toolbar.
+
+**6. Open any Jira issue**
+
+Navigate to any issue at `*.atlassian.net/browse/*`.  
+The **jira2md** button appears automatically on the page.
+
+### Keeping it up to date
+
+After pulling new changes from the repo, go back to `chrome://extensions` and click the **↺ refresh** icon on the jira2md card. No reinstall needed.
 
 ## Usage
 

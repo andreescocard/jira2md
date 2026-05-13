@@ -1,6 +1,10 @@
 {
    "action": {
-      "default_title": "jira2md"
+      "default_title": "jira2md",
+      "default_icon": {
+         "48": "icon48.png",
+         "128": "icon128.png"
+      }
    },
    "content_scripts": [ {
       "css": [ "styles.css" ],
@@ -11,6 +15,10 @@
    "host_permissions": [ "*://*.atlassian.net/*" ],
    "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzOAydGKiAuwgXEkiOzgDp7LYtHFIWsP9SIyOqOctATY2Nn9n/h/hf24WHgdkq/5kSQp6s01+Oe9p7NtTsZSIab/iBcv8PkZFp/yHgE5zwURTRcqkBQ7OKZwkXjaVVMb7jaUGFWhA/4KXd8DIR//OVfznXct8ites/f94WFjTPC9yqY8CLSrsqcy1GA3N2BVpxAKVmMYQdvBaGvLy9gHwMy+V5IuwvjSUAyZwhLt+I3kRNQPaX3a/Qmq63b54QCwEZVnKlcvg9JRA85unzV88BeIj1tVYN4CyA0YZZiQ581f9IzXULnRqF7H2jOWq7BVPcT+WudSk9mjsr6NXDeqA2QIDAQAB",
    "manifest_version": 3,
+   "icons": {
+      "48": "icon48.png",
+      "128": "icon128.png"
+   },
    "name": "jira2md",
    "permissions": [ "downloads" ],
    "update_url": "https://clients2.google.com/service/update2/crx",

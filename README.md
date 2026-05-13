@@ -181,7 +181,7 @@ Claude Code opens in the terminal with the full issue as context.
 
 | # | Status | Description |
 |---|--------|-------------|
-| 1 | Bug | **Checkboxes not rendering on export** — task list items appear as raw `- [ ]` / `- [x]` text instead of rendered checkboxes in the downloaded `.md` output |
+| 1 | ✅ Fixed | **Checkboxes not rendering on export** — task list items appear as raw `- [ ]` / `- [x]` text instead of rendered checkboxes in the downloaded `.md` output |
 | 2 | Missing | **Child tickets not included in export** — sub-tasks / child issues linked to the parent ticket are not exported; only the parent is captured. A summary of child tickets (key + title + status) should appear at the bottom of the export |
 
 ---

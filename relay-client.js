@@ -38,7 +38,10 @@
       const parent = widget && widget.parentElement;
       if (!parent) return;
 
-      parent.insertBefore(marker, widget);
+      // Insert AFTER widget (not before): the widget span is display:block in
+      // Jira's CSS, so inserting before it puts the marker on its own line in
+      // innerText. Inserting after keeps marker + task text inline.
+      parent.insertBefore(marker, widget.nextSibling);
       _injectedMarkers.push(marker);
     });
   }

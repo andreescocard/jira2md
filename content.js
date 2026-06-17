@@ -1,3 +1,545 @@
-/*! For license information please see content.js.LICENSE.txt */
-(()=>{function e(t){return e="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(e){return typeof e}:function(e){return e&&"function"==typeof Symbol&&e.constructor===Symbol&&e!==Symbol.prototype?"symbol":typeof e},e(t)}function t(t){if(null!=t){var n=t["function"==typeof Symbol&&Symbol.iterator||"@@iterator"],r=0;if(n)return n.call(t);if("function"==typeof t.next)return t;if(!isNaN(t.length))return{next:function(){return t&&r>=t.length&&(t=void 0),{value:t&&t[r++],done:!t}}}}throw new TypeError(e(t)+" is not iterable")}function n(t,n,r){return(n=function(t){var n=function(t){if("object"!=e(t)||!t)return t;var n=t[Symbol.toPrimitive];if(void 0!==n){var r=n.call(t,"string");if("object"!=e(r))return r;throw new TypeError("@@toPrimitive must return a primitive value.")}return String(t)}(t);return"symbol"==e(n)?n:n+""}(n))in t?Object.defineProperty(t,n,{value:r,enumerable:!0,configurable:!0,writable:!0}):t[n]=r,t}function r(){var e,t,n="function"==typeof Symbol?Symbol:{},i=n.iterator||"@@iterator",a=n.toStringTag||"@@toStringTag";function c(n,r,i,a){var c=r&&r.prototype instanceof l?r:l,d=Object.create(c.prototype);return o(d,"_invoke",function(n,r,o){var i,a,c,l=0,d=o||[],s=!1,m={p:0,n:0,v:e,a:f,f:f.bind(e,4),d:function(t,n){return i=t,a=0,c=e,m.n=n,u}};function f(n,r){for(a=n,c=r,t=0;!s&&l&&!o&&t<d.length;t++){var o,i=d[t],f=m.p,p=i[2];n>3?(o=p===r)&&(c=i[(a=i[4])?5:(a=3,3)],i[4]=i[5]=e):i[0]<=f&&((o=n<2&&f<i[1])?(a=0,m.v=r,m.n=i[1]):f<p&&(o=n<3||i[0]>r||r>p)&&(i[4]=n,i[5]=r,m.n=p,a=0))}if(o||n>1)return u;throw s=!0,r}return function(o,d,p){if(l>1)throw TypeError("Generator is already running");for(s&&1===d&&f(d,p),a=d,c=p;(t=a<2?e:c)||!s;){i||(a?a<3?(a>1&&(m.n=-1),f(a,c)):m.n=c:m.v=c);try{if(l=2,i){if(a||(o="next"),t=i[o]){if(!(t=t.call(i,c)))throw TypeError("iterator result is not an object");if(!t.done)return t;c=t.value,a<2&&(a=0)}else 1===a&&(t=i.return)&&t.call(i),a<2&&(c=TypeError("The iterator does not provide a '"+o+"' method"),a=1);i=e}else if((t=(s=m.n<0)?c:n.call(r,m))!==u)break}catch(t){i=e,a=1,c=t}finally{l=1}}return{value:t,done:s}}}(n,i,a),!0),d}var u={};function l(){}function d(){}function s(){}t=Object.getPrototypeOf;var m=[][i]?t(t([][i]())):(o(t={},i,function(){return this}),t),f=s.prototype=l.prototype=Object.create(m);function p(e){return Object.setPrototypeOf?Object.setPrototypeOf(e,s):(e.__proto__=s,o(e,a,"GeneratorFunction")),e.prototype=Object.create(f),e}return d.prototype=s,o(f,"constructor",s),o(s,"constructor",d),d.displayName="GeneratorFunction",o(s,a,"GeneratorFunction"),o(f),o(f,a,"Generator"),o(f,i,function(){return this}),o(f,"toString",function(){return"[object Generator]"}),(r=function(){return{w:c,m:p}})()}function o(e,t,n,r){var i=Object.defineProperty;try{i({},"",{})}catch(e){i=0}o=function(e,t,n,r){function a(t,n){o(e,t,function(e){return this._invoke(t,n,e)})}t?i?i(e,t,{value:n,enumerable:!r,configurable:!r,writable:!r}):e[t]=n:(a("next",0),a("throw",1),a("return",2))},o(e,t,n,r)}function i(e,t,n,r,o,i,a){try{var c=e[i](a),u=c.value}catch(e){return void n(e)}c.done?t(u):Promise.resolve(u).then(r,o)}function a(e){return function(){var t=this,n=arguments;return new Promise(function(r,o){var a=e.apply(t,n);function c(e){i(a,r,o,c,u,"next",e)}function u(e){i(a,r,o,c,u,"throw",e)}c(void 0)})}}!function(){function e(e,t){var n=document.createElement("div");n.id="j2m-modal-overlay",n.innerHTML='\n            <div id="j2m-modal-container">\n                <div id="j2m-modal-header">\n                    <h2>Jira2Markdown Editor - '.concat(t.key,'</h2>\n                    <span style="color: #6b778c; font-size: 12px;">Editing: ').concat(t.title,'</span>\n                </div>\n                <div id="j2m-modal-body">\n                    <div id="j2m-editor-pane">\n                        <div style="margin-bottom: 8px; font-weight: bold; color: #5e6c84;">Markdown Editor</div>\n                        <textarea id="j2m-markdown-input">').concat(e,'</textarea>\n                    </div>\n                    <div id="j2m-preview-pane">\n                        <div style="margin-bottom: 8px; font-weight: bold; color: #5e6c84;">Live Preview (Basic)</div>\n                        <div id="j2m-preview-content"></div>\n                        <div id="j2m-attachments-list" style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">\n                            <div style="font-weight: bold; color: #5e6c84; margin-bottom: 8px;">Attachments to Download:</div>\n                            <div id="j2m-attachments-content" style="max-height: 200px; overflow-y: auto; font-size: 12px;"></div>\n                        </div>\n                    </div>\n                </div>\n                <div id="j2m-modal-footer">\n                    <button id="j2m-btn-cancel" class="j2m-btn j2m-btn-secondary">Cancel</button>\n                    <button id="j2m-btn-download-md" class="j2m-btn j2m-btn-secondary">Download Markdown Only</button>\n                    <button id="j2m-btn-download-bundle" class="j2m-btn j2m-btn-primary">Download with Attachments</button>\n                </div>\n            </div>\n        '),document.body.appendChild(n);var o=n.querySelector("#j2m-markdown-input"),i=n.querySelector("#j2m-preview-content"),u=n.querySelector("#j2m-attachments-content"),l=n.querySelector("#j2m-btn-cancel"),d=n.querySelector("#j2m-btn-download-md"),s=n.querySelector("#j2m-btn-download-bundle");if(t.attachments&&t.attachments.length>0){var m="";t.attachments.forEach(function(e,t){m+='<div style="padding: 4px; border-bottom: 1px solid #eee;">✓ '.concat(e.name,"</div>")}),u.innerHTML=m}else u.innerHTML='<div style="color: #999; font-style: italic;">No attachments found</div>';var f=function(){var e=o.value;i.innerHTML=e.replace(/^# (.*$)/gim,"<h1>$1</h1>").replace(/^## (.*$)/gim,"<h2>$1</h2>").replace(/^### (.*$)/gim,"<h3>$1</h3>").replace(/\*\*(.*)\*\*/gim,"<b>$1</b>").replace(/\n/g,"<br>")};o.addEventListener("input",f),f();var p=function(){document.body.contains(n)&&document.body.removeChild(n)};l.onclick=p,n.onclick=function(e){e.target===n&&p()};var b=function(e){"Escape"===e.key&&(p(),document.removeEventListener("keydown",b))};document.addEventListener("keydown",b),d.onclick=a(r().m(function e(){var n;return r().w(function(e){for(;;)switch(e.n){case 0:return d.innerText="Downloading...",d.disabled=!0,n=o.value,e.n=1,c(n,t,!1);case 1:p();case 2:return e.a(2)}},e)})),s.onclick=a(r().m(function e(){var n;return r().w(function(e){for(;;)switch(e.n){case 0:return s.innerText="Processing Assets...",s.disabled=!0,n=o.value,e.n=1,c(n,t,!0);case 1:p();case 2:return e.a(2)}},e)}))}function o(){return i.apply(this,arguments)}function i(){return(i=a(r().m(function e(){var t,n,o,i,a,c,u,l,d;return r().w(function(e){for(;;)switch(e.p=e.n){case 0:if(n=[],o=(o=(null===(t=document.querySelector('[data-testid="issue.views.issue-base.foundation.breadcrumbs.breadcrumb-current-issue-container"]'))||void 0===t?void 0:t.innerText.trim())||"").replace(/\s*Export\s+MD\s+Bundle\s*/gi,"").trim()){e.n=1;break}return e.a(2,n);case 1:return e.p=1,i="/rest/api/2/issue/".concat(o),e.n=2,fetch(i);case 2:if((a=e.v).ok){e.n=4;break}return c="/rest/api/3/issues/".concat(o),e.n=3,fetch(c);case 3:a=e.v;case 4:if(!a.ok){e.n=6;break}return e.n=5,a.json();case 5:u=e.v,l=[],(u.fields&&u.fields.attachment||u.fields&&Array.isArray(u.fields.attachment))&&(l=u.fields.attachment),l.forEach(function(e,t){var r=e.filename||"attachment_".concat(e.id),o=e.content||e.download||e.url||"";o&&n.push({url:o,name:r,fileId:e.id,size:e.size})}),e.n=6;break;case 6:e.n=8;break;case 7:e.p=7,e.v;case 8:return 0===n.length&&(d=document.querySelector('[id="newFileExperienceWrapper"]')||document.querySelector('[data-testid*="filmstrip-view"]'))&&d.querySelectorAll("img").forEach(function(e,t){var r=e.getAttribute("src")||"",o=e.getAttribute("data-fileid")||"";if(o){var i=r;r.includes("media-cdn.atlassian.com")&&(i=r.split("?")[0]);for(var a,c="attachment_".concat(o),u=document.body.innerText,l=/[\w\-]+\.(png|jpg|jpeg|pdf|doc|docx|xls|xlsx|zip|rar|txt|csv|log|json|xml)/gi;null!==(a=l.exec(u));){c=a[0];break}n.push({url:i,name:c,fileId:o,originalSrc:r})}}),e.a(2,n)}},e,null,[[1,7]])}))).apply(this,arguments)}function c(e,t){return u.apply(this,arguments)}function u(){return u=a(r().m(function e(n,o){var i,a,c,u,l,d,s,m,f,p,b,v,y,h,g,w,x=arguments;return r().w(function(e){for(;;)switch(e.n){case 0:if(i=x.length>2&&void 0!==x[2]&&x[2],a=new JSZip,(c=o.title.replace(/Export\s+MD\s+Bundle/gi,"").trim())||(c="No Title"),u="".concat(o.key,"_").concat(c,".md"),l=n,d=[],!i){e.n=6;break}s=a.folder("assets"),m=/!\[.*?\]\((https?:\/\/.*?)\)/g,p=0,b=r().m(function e(){var t,n,o,i,a;return r().w(function(e){for(;;)switch(e.n){case 0:t=f[1],n=t.split(".").pop().split(/[?#]/)[0]||"png",o="image_".concat(++p,".").concat(n),i="./assets/".concat(o),l=l.replace(t,i),a=fetch(t).then(function(e){return e.blob()}).then(function(e){s.file(o,e)}).catch(function(e){}),d.push(a);case 1:return e.a(2)}},e)});case 1:if(null===(f=m.exec(n))){e.n=3;break}return e.d(t(b()),2);case 2:e.n=1;break;case 3:return(o.attachments||[]).forEach(function(e,t){e.url.split(".").pop().split(/[?#]/)[0];var n="".concat(e.name),r=fetch(e.url).then(function(e){if(!e.ok)throw new Error("HTTP ".concat(e.status));return e.blob()}).then(function(e){s.file(n,e)}).catch(function(e){});d.push(r)}),e.n=4,Promise.all(d);case 4:return a.file(u,l),e.n=5,a.generateAsync({type:"blob"});case 5:v=e.v,y="".concat(o.key,"_").concat(c,"_Bundle.zip"),(h=document.createElement("a")).href=URL.createObjectURL(v),h.download=y,h.click(),e.n=7;break;case 6:g=new Blob([n],{type:"text/markdown"}),(w=document.createElement("a")).href=URL.createObjectURL(g),w.download=u,w.click();case 7:return e.a(2)}},e)})),u.apply(this,arguments)}var l;function d(){return"undefined"!=typeof TurndownService&&(l||(l=new TurndownService(n(n({headingStyle:"atx",codeBlockStyle:"fenced",emDelimiter:"*",bulletListMarker:"-",preserveEmphasis:!0},"bulletListMarker","-"),"hr","---")),"undefined"!=typeof turndownPluginGfm&&l.use(turndownPluginGfm.gfm),l.addRule("table",{filter:"table",replacement:function(e){return"\n\n"+e+"\n\n"}}),l.addRule("table-row",{filter:"tr",replacement:function(e,t){for(var n="",r=t.querySelectorAll("th, td"),o=0;o<r.length;o++)n+=" "+r[o].innerText.trim().replace(/\n/g," ").replace(/\s+/g," ")+" |";if("THEAD"===t.parentNode.tagName||t.querySelector("th"))for(n+="\n",o=0;o<r.length;o++)n+=" --- |";return n+"\n"}}),l.addRule("table-cell",{filter:["th","td"],replacement:function(e){return e}}),l.addRule("pre",{filter:"pre",replacement:function(e,t){var n=(t.textContent||"").split("\n").map(function(e){return e}).join("\n").trim(),r="",o=t.querySelector("code");if(o&&o.className){var i=o.className.match(/language-(\w+)/);i&&(r=i[1])}return"\n```"+r+"\n"+n+"\n```\n"}}),l.addRule("code",{filter:function(e){return"CODE"===e.tagName&&"PRE"!==e.parentNode.tagName},replacement:function(e,t){return"`"+(t.textContent||"").trim()+"`"}}),l.addRule("cleanup-jira-attrs",{filter:function(e){return 1===e.nodeType&&e.className&&e.className.includes("_")},replacement:function(e){return e}})),!0)}function s(){return m.apply(this,arguments)}function m(){return(m=a(r().m(function t(){var n,i,a,c,u,s,m,f,p,b,v,y,h,g,w,x;return r().w(function(t){for(;;)switch(t.p=t.n){case 0:if(d()){t.n=1;break}return t.a(2,alert("Library loading..."));case 1:return t.p=1,i=(i=(null===(n=document.querySelector('[data-testid="issue.views.issue-base.foundation.breadcrumbs.breadcrumb-current-issue-container"]'))||void 0===n?void 0:n.innerText.trim())||"Jira").replace(/\s*Export\s+MD\s+Bundle\s*/gi,"").trim(),a="No Title",(c=document.querySelector('[data-testid="issue.views.issue-base.foundation.summary.heading"]'))&&((u=c.cloneNode(!0)).querySelectorAll("button").forEach(function(e){return e.remove()}),a=u.textContent.trim()),(a=a.replace(/Export\s+MD\s+Bundle/gi,"").replace(/Download[^a-zA-Z]*/gi,"").replace(/\s+/g," ").trim())&&0!==a.length||(a="No Title"),t.n=2,o();case 2:if(s=t.v,m="# ".concat(a,"\n\n"),f=document.querySelector('[data-testid="issue.views.field.rich-text.description"]'),document.querySelectorAll('[contenteditable="true"]').forEach(function(e,t){var n;null===(n=e.innerText)||void 0===n||n.substring(0,50)}),document.querySelectorAll("textarea").forEach(function(e,t){var n;null===(n=e.value)||void 0===n||n.substring(0,50)}),document.querySelectorAll('[data-testid*="description"]').forEach(function(e,t){var n,r;null===(n=e.innerText)||void 0===n||n.substring(0,100),null===(r=e.outerHTML)||void 0===r||r.substring(0,100)}),p="",(b=document.querySelector('[data-testid*="description"] [contenteditable="true"]')||document.querySelector('[contenteditable="true"]'))&&(p=b.innerText||""),!p&&(f=document.querySelector('[data-testid="issue.views.field.rich-text.description"]')))if(v=f.querySelector(".ak-renderer-document")||f,y=v.innerHTML||"",h=y.includes("<table")||y.includes("<tbody")||y.includes("<tr"),g=y.includes("<pre")||y.includes("<code"),(h||g)&&l)try{w=(w=y).replace(/<img[^>]*data-emoji[^>]*>/g,function(e){var t=e.match(/alt="([^"]+)"/),n=e.match(/data-emoji-short-name="([^"]+)"/);return t?t[1]:n?n[1]:":emoji:"}),(x=l.turndown(w))&&(x=(x=(x=(x=(x=x.replace(/<br>/g,"")).replace(/\n\s+\n/g,"\n")).replace(/\n\n\n+/g,"")).replace(/^\n+/,"")).replace(/\n+$/,"")),x&&x.includes("<table")&&x.match(/<table[^>]*>[\s\S]*?<\/table>/),x&&x.includes("| ---")||x&&x.includes("|"),p=x&&"string"==typeof x&&x.trim().length>0?x:(v.innerText||v.textContent||"").trim()}catch(e){p=(v.innerText||v.textContent||"").trim()}else p=(v.innerText||v.textContent||"").trim();p&&(m+=p),e(m,{key:i,title:a,attachments:s}),t.n=4;break;case 3:t.p=3,t.v;case 4:return t.a(2)}},t,null,[[1,3]])}))).apply(this,arguments)}function f(){if(!document.getElementById("jira-to-md-btn")){var e=document.querySelector('[data-testid="issue-view.views.common.content.main.content-column.top-navigation.actions-bar"]')||document.querySelector('[data-testid="issue.views.issue-base.foundation.breadcrumbs.breadcrumb-current-issue-container"]');if(e){var t=document.createElement("button");t.id="jira-to-md-btn",t.className="jira-md-export-button",t.innerHTML="Export MD Bundle",t.onclick=s,e.appendChild(t)}}}var p=null;new MutationObserver(function(){p&&clearTimeout(p),p=setTimeout(f,500)}).observe(document.body,{childList:!0,subtree:!0}),setTimeout(f,1e3)}()})();
-//# sourceMappingURL=content.js.map
+/**
+ * Jira2Markdown Content Script v1.1.0
+ * Modal editor + ZIP bundling + multi-field extraction.
+ *
+ * Loaded directly by manifest.json (no build step). Globals JSZip,
+ * TurndownService and turndownPluginGfm come from libs/* loaded before this.
+ */
+
+(function() {
+    console.log("[Jira2Markdown] Advanced version loaded.");
+
+    // --- Modal editor ---
+    function showEditorModal(initialMarkdown, issueInfo) {
+        const overlay = document.createElement('div');
+        overlay.id = 'j2m-modal-overlay';
+
+        overlay.innerHTML = `
+            <div id="j2m-modal-container">
+                <div id="j2m-modal-header">
+                    <h2>Jira2Markdown Editor - ${issueInfo.key}</h2>
+                    <span style="color: #6b778c; font-size: 12px;">Editing: ${issueInfo.title}</span>
+                </div>
+                <div id="j2m-modal-body">
+                    <div id="j2m-editor-pane">
+                        <div style="margin-bottom: 8px; font-weight: bold; color: #5e6c84;">Markdown Editor</div>
+                        <textarea id="j2m-markdown-input">${initialMarkdown}</textarea>
+                    </div>
+                    <div id="j2m-preview-pane">
+                        <div style="margin-bottom: 8px; font-weight: bold; color: #5e6c84;">Live Preview (Basic)</div>
+                        <div id="j2m-preview-content"></div>
+                        <div id="j2m-attachments-list" style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">
+                            <div style="font-weight: bold; color: #5e6c84; margin-bottom: 8px;">Attachments to Download:</div>
+                            <div id="j2m-attachments-content" style="max-height: 200px; overflow-y: auto; font-size: 12px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="j2m-modal-footer">
+                    <button id="j2m-btn-cancel" class="j2m-btn j2m-btn-secondary">Cancel</button>
+                    <button id="j2m-btn-download-md" class="j2m-btn j2m-btn-secondary">Download Markdown Only</button>
+                    <button id="j2m-btn-download-bundle" class="j2m-btn j2m-btn-primary">Download with Attachments</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const textarea = overlay.querySelector('#j2m-markdown-input');
+        const preview = overlay.querySelector('#j2m-preview-content');
+        const attachmentsContent = overlay.querySelector('#j2m-attachments-content');
+        const btnCancel = overlay.querySelector('#j2m-btn-cancel');
+        const btnDownloadMd = overlay.querySelector('#j2m-btn-download-md');
+        const btnDownloadBundle = overlay.querySelector('#j2m-btn-download-bundle');
+
+        // Attachment list
+        if (issueInfo.attachments && issueInfo.attachments.length > 0) {
+            let attachmentHtml = '';
+            issueInfo.attachments.forEach((att) => {
+                attachmentHtml += `<div style="padding: 4px; border-bottom: 1px solid #eee;">✓ ${att.name}</div>`;
+            });
+            attachmentsContent.innerHTML = attachmentHtml;
+        } else {
+            attachmentsContent.innerHTML = '<div style="color: #999; font-style: italic;">No attachments found</div>';
+        }
+
+        // Basic preview (headings + line breaks only, no full markdown parser)
+        const updatePreview = () => {
+            const text = textarea.value;
+            preview.innerHTML = text
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/\*\*(.*)\*\*/gim, '<b>$1</b>')
+                .replace(/\n/g, '<br>');
+        };
+
+        textarea.addEventListener('input', updatePreview);
+        updatePreview();
+
+        const closeModal = () => {
+            if (document.body.contains(overlay)) {
+                document.body.removeChild(overlay);
+            }
+        };
+
+        btnCancel.onclick = closeModal;
+
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                closeModal();
+            }
+        };
+
+        const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', handleEsc);
+            }
+        };
+        document.addEventListener('keydown', handleEsc);
+
+        btnDownloadMd.onclick = async () => {
+            btnDownloadMd.innerText = "Downloading...";
+            btnDownloadMd.disabled = true;
+            const finalMarkdown = textarea.value;
+            await generateZipArchive(finalMarkdown, issueInfo, false);
+            closeModal();
+        };
+
+        btnDownloadBundle.onclick = async () => {
+            btnDownloadBundle.innerText = "Processing Assets...";
+            btnDownloadBundle.disabled = true;
+            const finalMarkdown = textarea.value;
+            await generateZipArchive(finalMarkdown, issueInfo, true);
+            closeModal();
+        };
+    }
+
+    // --- Attachment extraction ---
+    async function extractAttachments() {
+        const attachments = [];
+
+        let issueKey = document.querySelector('[data-testid="issue.views.issue-base.foundation.breadcrumbs.breadcrumb-current-issue-container"]')?.innerText.trim() || '';
+        issueKey = issueKey.replace(/\s*Export\s+MD\s+Bundle\s*/gi, '').trim();
+
+        if (!issueKey) {
+            console.log('[Jira2Markdown] Could not find issue key');
+            return attachments;
+        }
+
+        // Strategy 1: Jira REST API
+        try {
+            const apiV2Url = `/rest/api/2/issue/${issueKey}`;
+            let response = await fetch(apiV2Url);
+
+            if (!response.ok) {
+                const apiV3Url = `/rest/api/3/issues/${issueKey}`;
+                response = await fetch(apiV3Url);
+            }
+
+            if (response.ok) {
+                const issueData = await response.json();
+
+                let attachmentArray = [];
+                if (issueData.fields && issueData.fields.attachment) {
+                    attachmentArray = issueData.fields.attachment;
+                }
+
+                attachmentArray.forEach((att) => {
+                    const fileName = att.filename || `attachment_${att.id}`;
+                    const downloadUrl = att.content || att.download || att.url || '';
+                    if (downloadUrl) {
+                        attachments.push({
+                            url: downloadUrl,
+                            name: fileName,
+                            fileId: att.id,
+                            size: att.size
+                        });
+                    }
+                });
+            }
+        } catch (apiError) {
+            console.error('[Jira2Markdown] Failed to fetch from API:', apiError);
+        }
+
+        // Strategy 2: DOM fallback
+        if (attachments.length === 0) {
+            const filmstripWrapper = document.querySelector('[id="newFileExperienceWrapper"]') ||
+                                    document.querySelector('[data-testid*="filmstrip-view"]');
+            if (filmstripWrapper) {
+                const imgs = filmstripWrapper.querySelectorAll('img');
+                imgs.forEach((img) => {
+                    const src = img.getAttribute('src') || '';
+                    const fileId = img.getAttribute('data-fileid') || '';
+
+                    if (fileId) {
+                        let downloadUrl = src;
+                        if (src.includes('media-cdn.atlassian.com')) {
+                            downloadUrl = src.split('?')[0];
+                        }
+
+                        let fileName = `attachment_${fileId}`;
+                        const pageText = document.body.innerText;
+                        const filePattern = /[\w\-]+\.(png|jpg|jpeg|pdf|doc|docx|xls|xlsx|zip|rar|txt|csv|log|json|xml)/gi;
+                        let fileMatch;
+                        while ((fileMatch = filePattern.exec(pageText)) !== null) {
+                            fileName = fileMatch[0];
+                            break;
+                        }
+
+                        attachments.push({
+                            url: downloadUrl,
+                            name: fileName,
+                            fileId: fileId,
+                            originalSrc: src
+                        });
+                    }
+                });
+            }
+        }
+
+        return attachments;
+    }
+
+    // --- ZIP bundle download ---
+    async function generateZipArchive(markdown, issueInfo, includeAttachments = false) {
+        const zip = new JSZip();
+
+        let cleanTitle = issueInfo.title.replace(/Export\s+MD\s+Bundle/gi, '').trim();
+        if (!cleanTitle) {
+            cleanTitle = 'No Title';
+        }
+
+        const mdFileName = `${issueInfo.key}_${cleanTitle}.md`;
+
+        let updatedMarkdown = markdown;
+        const fetchPromises = [];
+
+        if (includeAttachments) {
+            const assetsFolder = zip.folder("assets");
+
+            const imgRegex = /!\[.*?\]\((https?:\/\/.*?)\)/g;
+            let match;
+            let assetCount = 0;
+
+            while ((match = imgRegex.exec(markdown)) !== null) {
+                const url = match[1];
+                const ext = url.split('.').pop().split(/[?#]/)[0] || 'png';
+                const fileName = `image_${++assetCount}.${ext}`;
+                const relativePath = `./assets/${fileName}`;
+
+                updatedMarkdown = updatedMarkdown.replace(url, relativePath);
+
+                const fetchTask = fetch(url)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        assetsFolder.file(fileName, blob);
+                    })
+                    .catch(err => console.error(`Failed to fetch asset: ${url}`, err));
+
+                fetchPromises.push(fetchTask);
+            }
+
+            const attachments = issueInfo.attachments || [];
+            attachments.forEach((attachment) => {
+                const fileName = `${attachment.name}`;
+                const fetchTask = fetch(attachment.url)
+                    .then(res => {
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        return res.blob();
+                    })
+                    .then(blob => {
+                        assetsFolder.file(fileName, blob);
+                    })
+                    .catch(err => {
+                        console.error(`[Jira2Markdown] Failed to fetch attachment: ${attachment.url}`, err);
+                    });
+
+                fetchPromises.push(fetchTask);
+            });
+
+            await Promise.all(fetchPromises);
+
+            zip.file(mdFileName, updatedMarkdown);
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const zipFileName = `${issueInfo.key}_${cleanTitle}_Bundle.zip`;
+
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(content);
+            link.download = zipFileName;
+            link.click();
+        } else {
+            const blob = new Blob([markdown], { type: 'text/markdown' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = mdFileName;
+            link.click();
+        }
+    }
+
+    let turndownService;
+    function initTurndown() {
+        if (typeof TurndownService === 'undefined') return false;
+        if (turndownService) return true;
+
+        turndownService = new TurndownService({
+            headingStyle: 'atx',
+            codeBlockStyle: 'fenced',
+            emDelimiter: '*',
+            bulletListMarker: '-',
+            hr: '---'
+        });
+
+        if (typeof turndownPluginGfm !== 'undefined') {
+            turndownService.use(turndownPluginGfm.gfm);
+        } else {
+            console.warn('[Jira2Markdown] GFM plugin not found');
+        }
+
+        turndownService.addRule('table', {
+            filter: 'table',
+            replacement: function(content) {
+                return '\n\n' + content + '\n\n';
+            }
+        });
+
+        turndownService.addRule('table-row', {
+            filter: 'tr',
+            replacement: function(content, node) {
+                var row = '';
+                var cells = node.querySelectorAll('th, td');
+
+                for (var i = 0; i < cells.length; i++) {
+                    var cellText = cells[i].innerText.trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
+                    row += ' ' + cellText + ' |';
+                }
+
+                if (node.parentNode.tagName === 'THEAD' || node.querySelector('th')) {
+                    row += '\n';
+                    for (var j = 0; j < cells.length; j++) {
+                        row += ' --- |';
+                    }
+                }
+
+                return row + '\n';
+            }
+        });
+
+        turndownService.addRule('table-cell', {
+            filter: ['th', 'td'],
+            replacement: function(content) {
+                return content;
+            }
+        });
+
+        turndownService.addRule('pre', {
+            filter: 'pre',
+            replacement: function(content, node) {
+                var code = node.textContent || '';
+                var cleanedCode = code.split('\n').join('\n').trim();
+
+                var language = '';
+                var codeElement = node.querySelector('code');
+                if (codeElement && codeElement.className) {
+                    var match = codeElement.className.match(/language-(\w+)/);
+                    if (match) {
+                        language = match[1];
+                    }
+                }
+
+                return '\n```' + language + '\n' + cleanedCode + '\n```\n';
+            }
+        });
+
+        turndownService.addRule('code', {
+            filter: function(node) {
+                return node.tagName === 'CODE' && node.parentNode.tagName !== 'PRE';
+            },
+            replacement: function(content, node) {
+                return '`' + (node.textContent || '').trim() + '`';
+            }
+        });
+
+        turndownService.addRule('cleanup-jira-attrs', {
+            filter: function(node) {
+                if (node.nodeType !== 1) return false;
+                return node.className && node.className.includes('_');
+            },
+            replacement: function(content) {
+                return content;
+            }
+        });
+
+        return true;
+    }
+
+    // Convert a single rich-text field container (e.g. description, User Story,
+    // Acceptance Criteria) into markdown. Reuses Turndown for tables/code and
+    // falls back to innerText for plain content.
+    function convertFieldToMarkdown(container) {
+        const renderer = container.querySelector('.ak-renderer-document') || container;
+        const html = renderer.innerHTML || '';
+
+        const hasTable = html.includes('<table') || html.includes('<tbody') || html.includes('<tr');
+        const hasCode = html.includes('<pre') || html.includes('<code');
+
+        if ((hasTable || hasCode) && turndownService) {
+            try {
+                let cleanedHtml = html.replace(/<img[^>]*data-emoji[^>]*>/g, function(match) {
+                    var altMatch = match.match(/alt="([^"]+)"/);
+                    var shortNameMatch = match.match(/data-emoji-short-name="([^"]+)"/);
+                    return altMatch ? altMatch[1] : (shortNameMatch ? shortNameMatch[1] : ':emoji:');
+                });
+
+                let converted = turndownService.turndown(cleanedHtml);
+
+                if (converted) {
+                    converted = converted
+                        .replace(/<br>/g, '')
+                        .replace(/\n\s+\n/g, '\n')
+                        .replace(/\n\n\n+/g, '\n\n')
+                        .replace(/^\n+/, '')
+                        .replace(/\n+$/, '');
+                }
+
+                if (converted && typeof converted === 'string' && converted.trim().length > 0) {
+                    return converted;
+                }
+                return (renderer.innerText || renderer.textContent || '').trim();
+            } catch (e) {
+                console.warn('[Jira2Markdown] Turndown error: ' + e.message + ', using innerText fallback');
+                return (renderer.innerText || renderer.textContent || '').trim();
+            }
+        }
+
+        return (renderer.innerText || renderer.textContent || '').trim();
+    }
+
+    // Best-effort lookup of a rich-text field's display label (e.g. "User
+    // Story", "Acceptance Criteria"). Walks up a few ancestors looking for a
+    // heading/label element that sits outside the field value itself.
+    function getFieldLabel(container) {
+        let el = container;
+        for (let i = 0; i < 6 && el; i++) {
+            el = el.parentElement;
+            if (!el) break;
+            const candidates = el.querySelectorAll(
+                'h2, h3, [role="heading"], label, [data-testid*="heading"], [data-testid*="label"]'
+            );
+            for (const c of candidates) {
+                if (container.contains(c)) continue;
+                const txt = (c.innerText || c.textContent || '').trim();
+                if (txt && txt.length <= 80) return txt;
+            }
+        }
+        return '';
+    }
+
+    // --- Main export flow ---
+    async function handleExport() {
+        if (!initTurndown()) return alert("Library loading...");
+
+        try {
+            let issueKey = document.querySelector('[data-testid="issue.views.issue-base.foundation.breadcrumbs.breadcrumb-current-issue-container"]')?.innerText.trim() || 'Jira';
+            issueKey = issueKey.replace(/\s*Export\s+MD\s+Bundle\s*/gi, '').trim();
+
+            let title = 'No Title';
+            const headingElement = document.querySelector('[data-testid="issue.views.issue-base.foundation.summary.heading"]');
+            if (headingElement) {
+                const clonedElement = headingElement.cloneNode(true);
+                clonedElement.querySelectorAll('button').forEach(btn => btn.remove());
+                title = clonedElement.textContent.trim();
+            }
+
+            title = title.replace(/Export\s+MD\s+Bundle/gi, '')
+                        .replace(/Download[^a-zA-Z]*/gi, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+
+            if (!title || title.length === 0) {
+                title = 'No Title';
+            }
+
+            const attachments = await extractAttachments();
+
+            let initialMarkdown = `# ${title}\n\n`;
+
+            // --- Description (kept at top, no sub-heading) ---
+            // Edit mode: read the active contenteditable. View mode: render via Turndown.
+            let descriptionText = '';
+            const editableDesc = document.querySelector('[data-testid*="description"] [contenteditable="true"]') ||
+                                 document.querySelector('[contenteditable="true"]');
+            if (editableDesc) {
+                descriptionText = editableDesc.innerText || '';
+            }
+            if (!descriptionText) {
+                const descriptionContainer = document.querySelector('[data-testid="issue.views.field.rich-text.description"]');
+                if (descriptionContainer) {
+                    descriptionText = convertFieldToMarkdown(descriptionContainer);
+                }
+            }
+            if (descriptionText) {
+                initialMarkdown += descriptionText;
+            }
+
+            // --- Other rich-text fields (User Story, Acceptance Criteria, ...) ---
+            // Every custom rich-text field renders as
+            // [data-testid="issue.views.field.rich-text.<customfield_id>"].
+            // The old version only read the description and dropped all of these.
+            const allRichText = Array.from(
+                document.querySelectorAll('[data-testid^="issue.views.field.rich-text."]')
+            );
+
+            // Drop the description (handled above) and any field nested inside
+            // another matched field, to avoid duplicate output.
+            const fields = allRichText.filter(container => {
+                const testid = container.getAttribute('data-testid') || '';
+                if (testid === 'issue.views.field.rich-text.description') return false;
+                return !allRichText.some(other => other !== container && other.contains(container));
+            });
+
+            fields.forEach(container => {
+                const content = convertFieldToMarkdown(container);
+                if (!content || !content.trim()) return;
+
+                const testid = container.getAttribute('data-testid') || '';
+                const label = getFieldLabel(container) ||
+                              testid.replace('issue.views.field.rich-text.', '');
+
+                initialMarkdown += `\n\n## ${label}\n\n${content}`;
+            });
+
+            console.log('[Jira2Markdown] Final markdown length: ' + initialMarkdown.length +
+                        ' (' + fields.length + ' extra rich-text fields)');
+
+            showEditorModal(initialMarkdown, { key: issueKey, title: title, attachments: attachments });
+
+        } catch (error) {
+            console.error("[Jira2Markdown] Export error:", error);
+        }
+    }
+
+    // --- Button injection ---
+    function injectButton() {
+        if (document.getElementById('jira-to-md-btn')) return;
+        const target = document.querySelector('[data-testid="issue-view.views.common.content.main.content-column.top-navigation.actions-bar"]') ||
+                     document.querySelector('[data-testid="issue.views.issue-base.foundation.breadcrumbs.breadcrumb-current-issue-container"]');
+        if (target) {
+            const btn = document.createElement('button');
+            btn.id = 'jira-to-md-btn';
+            btn.className = 'jira-md-export-button';
+            btn.innerHTML = 'Export MD Bundle';
+            btn.onclick = handleExport;
+            target.appendChild(btn);
+        }
+    }
+
+    let timeout = null;
+    const observer = new MutationObserver(() => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(injectButton, 500);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(injectButton, 1000);
+})();

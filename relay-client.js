@@ -9,6 +9,12 @@
  * innerText we inject plain text markers ("- [x] " / "- [ ] ") directly into
  * the Jira DOM as text nodes next to each checkbox widget. innerText then
  * picks them up naturally. We remove the injected nodes after the modal opens.
+ *
+ * STRIKETHROUGH FIX STRATEGY
+ * Same problem: innerText discards text-decoration:line-through. Before the
+ * read we inject "~~" text nodes at the start and end of each struck element
+ * (inline style line-through, or <del>/<s>/<strike>) so innerText yields
+ * "~~text~~". Cleaned up with the same marker list.
  */
 
 (function () {
@@ -52,6 +58,29 @@
     });
   }
 
+  // ── Strikethrough DOM injection ───────────────────────────────────────────
+
+  const STRIKE_SELECTOR = 'del, s, strike, [style*="line-through"]';
+
+  function injectStrikethroughMarkers() {
+    const overlay = document.getElementById('j2m-modal-overlay');
+    const all = Array.from(document.querySelectorAll(STRIKE_SELECTOR));
+    const struck = all.filter(el => !overlay || !overlay.contains(el));
+
+    struck.forEach(el => {
+      // Skip nested matches — only mark the outermost struck element so we
+      // don't emit "~~~~text~~~~".
+      if (el.parentElement && el.parentElement.closest(STRIKE_SELECTOR)) return;
+      if (!(el.textContent || '').trim()) return;
+
+      const open  = document.createTextNode('~~');
+      const close = document.createTextNode('~~');
+      el.insertBefore(open, el.firstChild);
+      el.appendChild(close);
+      _injectedMarkers.push(open, close);
+    });
+  }
+
   function removeInjectedMarkers() {
     _injectedMarkers.forEach(n => { if (n.parentNode) n.parentNode.removeChild(n); });
     _injectedMarkers = [];
@@ -69,6 +98,7 @@
     const orig = btn.onclick;
     btn.onclick = function (e) {
       injectCheckboxMarkers();
+      injectStrikethroughMarkers();
       if (orig) orig.call(this, e);
       // Fallback cleanup in case modal never opens (e.g. error in content.js)
       setTimeout(removeInjectedMarkers, 5000);

@@ -81,6 +81,36 @@
     });
   }
 
+  // ── Text color DOM injection ──────────────────────────────────────────────
+  // New Jira wraps colored text in spans carrying data-text-custom-color (a hex
+  // value). innerText drops the color, so wrap the run in an inline HTML span —
+  // the only way to carry color through markdown.
+
+  const COLOR_SELECTOR = '[data-text-custom-color]';
+
+  function injectColorMarkers() {
+    const overlay = document.getElementById('j2m-modal-overlay');
+    const all = Array.from(document.querySelectorAll(COLOR_SELECTOR));
+    const colored = all.filter(el => !overlay || !overlay.contains(el));
+
+    colored.forEach(el => {
+      // Only the outermost colored element, so we don't nest spans.
+      if (el.parentElement && el.parentElement.closest(COLOR_SELECTOR)) return;
+      if (!(el.textContent || '').trim()) return;
+
+      const color = (el.getAttribute('data-text-custom-color') || '').trim();
+      // Strict hex allowlist — value is DOM-sourced, so reject anything that
+      // could break out of the style attribute or the tag.
+      if (!/^#[0-9a-fA-F]{3,8}$/.test(color)) return;
+
+      const open  = document.createTextNode(`<span style="color:${color}">`);
+      const close = document.createTextNode('</span>');
+      el.insertBefore(open, el.firstChild);
+      el.appendChild(close);
+      _injectedMarkers.push(open, close);
+    });
+  }
+
   function removeInjectedMarkers() {
     _injectedMarkers.forEach(n => { if (n.parentNode) n.parentNode.removeChild(n); });
     _injectedMarkers = [];
@@ -99,6 +129,7 @@
     btn.onclick = function (e) {
       injectCheckboxMarkers();
       injectStrikethroughMarkers();
+      injectColorMarkers();
       if (orig) orig.call(this, e);
       // Fallback cleanup in case modal never opens (e.g. error in content.js)
       setTimeout(removeInjectedMarkers, 5000);

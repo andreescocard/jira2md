@@ -416,6 +416,71 @@
         return (renderer.innerText || renderer.textContent || '').trim();
     }
 
+    // Jira renders every field block with a heading title element carrying one
+    // of these component selectors. Anchoring on the heading (instead of on a
+    // field-type-specific testid) lets us walk every field, whatever its type:
+    // rich text, plain text area, checkbox, select, ...
+    const FIELD_HEADING_SELECTOR = [
+        '[data-component-selector="jira-issue-field-heading-multiline-field-heading-title"]',
+        '[data-component-selector="jira-issue-field-heading-field-heading-title"]'
+    ].join(', ');
+
+    // Nodes that hold a field's rendered value in view mode.
+    const FIELD_VALUE_SELECTOR = [
+        '.ak-renderer-document',
+        '[data-testid="issue-internal-fields.text-area.text-content-area"]',
+        '[data-component-selector="jira-issue-field-inline-edit-read-view-container"]',
+        '[data-read-view-fit-container-width="true"]'
+    ].join(', ');
+
+    // Placeholder text Jira shows for an empty field, per locale.
+    const EMPTY_FIELD_VALUES = [
+        'none', 'nenhum', 'nenhuma', 'ninguno', 'aucun', 'keine', 'nessuno',
+        'なし', '-', '_'
+    ];
+
+    function isEmptyFieldValue(text) {
+        const t = (text || '').trim().toLowerCase();
+        if (!t) return true;
+        return EMPTY_FIELD_VALUES.indexOf(t) !== -1;
+    }
+
+    // Given a heading title element, find the smallest ancestor that also holds
+    // the field's value node. Bails out if the ancestor swallows a second
+    // heading — that means we climbed past this field's own block.
+    function findFieldBlock(heading) {
+        let el = heading;
+        for (let i = 0; i < 8 && el; i++) {
+            el = el.parentElement;
+            if (!el) break;
+            if (el.querySelectorAll(FIELD_HEADING_SELECTOR).length > 1) return null;
+            const value = el.querySelector(FIELD_VALUE_SELECTOR);
+            if (value && !heading.contains(value)) return { block: el, value: value };
+        }
+        return null;
+    }
+
+    // Extract a field's value as markdown. Rich text goes through Turndown,
+    // everything else through innerText.
+    function extractFieldValue(block, valueNode) {
+        const rich = block.querySelector('[data-testid^="issue.views.field.rich-text."]');
+        if (rich) return convertFieldToMarkdown(rich);
+
+        let text = valueNode.innerText || '';
+        // Plain text-area fields keep their line breaks as raw newlines in the
+        // source. If innerText collapsed them (no pre-wrap applied), fall back
+        // to textContent so multi-line values are not flattened into one line.
+        const raw = valueNode.textContent || '';
+        if (text.indexOf('\n') === -1 && raw.indexOf('\n') !== -1) text = raw;
+
+        return text
+            .split('\n')
+            .map(line => line.replace(/\s+$/, ''))
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
+
     // Best-effort lookup of a rich-text field's display label (e.g. "User
     // Story", "Acceptance Criteria"). Walks up a few ancestors looking for a
     // heading/label element that sits outside the field value itself.
@@ -483,35 +548,59 @@
                 initialMarkdown += descriptionText;
             }
 
-            // --- Other rich-text fields (User Story, Acceptance Criteria, ...) ---
-            // Every custom rich-text field renders as
-            // [data-testid="issue.views.field.rich-text.<customfield_id>"].
-            // The old version only read the description and dropped all of these.
+            // --- Every other field, in DOM order ---
+            // Walks field headings rather than a single field-type testid, so
+            // plain text areas (Steps to Reproduce, Expected/Actual Result),
+            // checkbox/select fields (Devices) and rich-text custom fields
+            // (User Story, Acceptance Criteria) all get exported. The old
+            // version matched only rich-text and silently dropped the rest.
+            const headings = Array.from(document.querySelectorAll(FIELD_HEADING_SELECTOR));
+            const emittedRichText = [];
+            let fieldCount = 0;
+
+            headings.forEach(heading => {
+                const found = findFieldBlock(heading);
+                if (!found) return;
+
+                // Description already emitted at the top, without a heading.
+                if (found.block.querySelector('[data-testid="issue.views.field.rich-text.description"]')) return;
+
+                const label = (heading.innerText || heading.textContent || '').trim();
+                if (!label) return;
+
+                const content = extractFieldValue(found.block, found.value);
+                if (isEmptyFieldValue(content)) return;
+
+                const rich = found.block.querySelector('[data-testid^="issue.views.field.rich-text."]');
+                if (rich) emittedRichText.push(rich);
+
+                initialMarkdown += `\n\n## ${label}\n\n${content}`;
+                fieldCount++;
+            });
+
+            // Fallback: rich-text fields whose heading uses a markup we did not
+            // recognise would otherwise be lost.
             const allRichText = Array.from(
                 document.querySelectorAll('[data-testid^="issue.views.field.rich-text."]')
             );
-
-            // Drop the description (handled above) and any field nested inside
-            // another matched field, to avoid duplicate output.
-            const fields = allRichText.filter(container => {
+            allRichText.forEach(container => {
                 const testid = container.getAttribute('data-testid') || '';
-                if (testid === 'issue.views.field.rich-text.description') return false;
-                return !allRichText.some(other => other !== container && other.contains(container));
-            });
+                if (testid === 'issue.views.field.rich-text.description') return;
+                if (emittedRichText.some(done => done === container || done.contains(container))) return;
+                if (allRichText.some(other => other !== container && other.contains(container))) return;
 
-            fields.forEach(container => {
                 const content = convertFieldToMarkdown(container);
-                if (!content || !content.trim()) return;
+                if (isEmptyFieldValue(content)) return;
 
-                const testid = container.getAttribute('data-testid') || '';
                 const label = getFieldLabel(container) ||
                               testid.replace('issue.views.field.rich-text.', '');
 
                 initialMarkdown += `\n\n## ${label}\n\n${content}`;
+                fieldCount++;
             });
 
             console.log('[Jira2Markdown] Final markdown length: ' + initialMarkdown.length +
-                        ' (' + fields.length + ' extra rich-text fields)');
+                        ' (' + fieldCount + ' extra fields)');
 
             showEditorModal(initialMarkdown, { key: issueKey, title: title, attachments: attachments });
 

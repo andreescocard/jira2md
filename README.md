@@ -177,6 +177,16 @@ Claude Code opens in the terminal with the full issue as context.
 
 > If the relay is not running, the button shows **"Relay offline"** — no crash, no silent failure.
 
+## Known Limitations
+
+- **Comments** — Only comments currently rendered on the page are exported. If Jira displays a "load more comments" control, the export includes a note that older comments were not loaded.
+- **Internal comment detection** — Restricted or JSM-internal comments are labelled `**[INTERNAL]**` where they can be positively detected; absence of the label does not indicate a comment is public.
+- **Comment images** — Images embedded in comments are converted to text markers (`[image: filename]`) because Atlassian media URLs are token-signed and expire after the page session.
+
+## Testing
+
+For contributors: open `test/test.html` in a browser to run the pure Markdown helper functions through a suite of unit tests. The page title will display `PASS` or list any failures. This covers only the string-transformation functions, not the DOM interaction code.
+
 ## Known Bugs & Missing Features
 
 | # | Status | Description |

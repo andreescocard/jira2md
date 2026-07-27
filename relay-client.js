@@ -15,6 +15,14 @@
  * read we inject "~~" text nodes at the start and end of each struck element
  * (inline style line-through, or <del>/<s>/<strike>) so innerText yields
  * "~~text~~". Cleaned up with the same marker list.
+ *
+ * SHARED MARKER SEAM
+ * All three injectors take an optional root (default document) so a caller
+ * can scope injection to a single comment instead of the whole page.
+ * withMarkers(root, fn) is the one seam that runs injectors, calls fn(), and
+ * schedules cleanup — used by the main export button today and by future
+ * per-comment export buttons. Injectors also skip anything inside an open
+ * [contenteditable="true"] region so an unsaved draft never gets mutated.
  */
 
 (function () {
@@ -26,13 +34,19 @@
 
   // ── Checkbox DOM injection ────────────────────────────────────────────────
 
-  function injectCheckboxMarkers() {
+  function injectCheckboxMarkers(root = document) {
     _injectedMarkers = [];
 
-    // All checkboxes on the page that are NOT inside our own modal
+    // All checkboxes under root that are NOT inside our own modal or an open
+    // editable draft — mutating a draft's DOM would corrupt unsaved text.
+    // (content.js separately reads [contenteditable="true"] via innerText in
+    // edit mode — see content.js:536 — that read doesn't depend on markers,
+    // so skipping injection there is safe.)
     const overlay = document.getElementById('j2m-modal-overlay');
-    const all = Array.from(document.querySelectorAll('input[type="checkbox"]'));
-    const checkboxes = all.filter(cb => !overlay || !overlay.contains(cb));
+    const all = Array.from(root.querySelectorAll('input[type="checkbox"]'));
+    const checkboxes = all.filter(cb =>
+      (!overlay || !overlay.contains(cb)) && !cb.closest('[contenteditable="true"]')
+    );
 
     checkboxes.forEach(cb => {
       const checked = cb.checked || cb.hasAttribute('checked');
@@ -62,10 +76,17 @@
 
   const STRIKE_SELECTOR = 'del, s, strike, [style*="line-through"]';
 
-  function injectStrikethroughMarkers() {
+  function injectStrikethroughMarkers(root = document) {
     const overlay = document.getElementById('j2m-modal-overlay');
-    const all = Array.from(document.querySelectorAll(STRIKE_SELECTOR));
-    const struck = all.filter(el => !overlay || !overlay.contains(el));
+    const all = Array.from(root.querySelectorAll(STRIKE_SELECTOR));
+    // querySelectorAll never matches root itself — check separately so a
+    // caller can pass a single struck element as the scope (e.g. a comment).
+    if (root.nodeType === 1 && root.matches(STRIKE_SELECTOR)) all.unshift(root);
+    // Skip our own modal and open editable drafts (see contenteditable note
+    // in injectCheckboxMarkers above).
+    const struck = all.filter(el =>
+      (!overlay || !overlay.contains(el)) && !el.closest('[contenteditable="true"]')
+    );
 
     struck.forEach(el => {
       // Skip nested matches — only mark the outermost struck element so we
@@ -88,10 +109,17 @@
 
   const COLOR_SELECTOR = '[data-text-custom-color]';
 
-  function injectColorMarkers() {
+  function injectColorMarkers(root = document) {
     const overlay = document.getElementById('j2m-modal-overlay');
-    const all = Array.from(document.querySelectorAll(COLOR_SELECTOR));
-    const colored = all.filter(el => !overlay || !overlay.contains(el));
+    const all = Array.from(root.querySelectorAll(COLOR_SELECTOR));
+    // querySelectorAll never matches root itself — check separately, same as
+    // injectStrikethroughMarkers.
+    if (root.nodeType === 1 && root.matches(COLOR_SELECTOR)) all.unshift(root);
+    // Skip our own modal and open editable drafts (see contenteditable note
+    // in injectCheckboxMarkers above).
+    const colored = all.filter(el =>
+      (!overlay || !overlay.contains(el)) && !el.closest('[contenteditable="true"]')
+    );
 
     colored.forEach(el => {
       // Only the outermost colored element, so we don't nest spans.
@@ -116,6 +144,26 @@
     _injectedMarkers = [];
   }
 
+  // ── Shared marker seam ─────────────────────────────────────────────────────
+  // Single entry point that runs all three injectors over root, then fn(),
+  // then schedules the fallback cleanup. Both the main export button and
+  // future per-comment export buttons should call this rather than the
+  // injectors directly, so nobody forgets a step.
+
+  function withMarkers(root = document, fn) {
+    injectCheckboxMarkers(root);
+    injectStrikethroughMarkers(root);
+    injectColorMarkers(root);
+    try {
+      return fn();
+    } finally {
+      // Fallback cleanup in case the modal never opens (e.g. error in
+      // content.js) — NOT synchronous, restructureModal's own cleanup runs
+      // first in the success path and this is just the safety net.
+      setTimeout(removeInjectedMarkers, 5000);
+    }
+  }
+
   // ── Intercept export button ───────────────────────────────────────────────
   // Wrap content.js's onclick so we inject markers just before it reads
   // innerText, and schedule cleanup after the modal has been created.
@@ -127,12 +175,7 @@
 
     const orig = btn.onclick;
     btn.onclick = function (e) {
-      injectCheckboxMarkers();
-      injectStrikethroughMarkers();
-      injectColorMarkers();
-      if (orig) orig.call(this, e);
-      // Fallback cleanup in case modal never opens (e.g. error in content.js)
-      setTimeout(removeInjectedMarkers, 5000);
+      withMarkers(document, () => orig && orig.call(this, e));
     };
   }
 
@@ -426,4 +469,8 @@
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Shared seam for future per-comment export buttons — they scope root to
+  // a single comment instead of document, reusing the same cleanup contract.
+  window.__j2mWithMarkers = withMarkers;
 })();

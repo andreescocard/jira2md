@@ -501,6 +501,494 @@
         return '';
     }
 
+    // --- Pure helpers (also exposed for unit testing, see bottom of file) ---
+
+    function pad2(n) {
+        return n < 10 ? '0' + n : '' + n;
+    }
+
+    // Formats an absolute Date as 'YYYY-MM-DD HH:mm' (local time). Falls back
+    // to the trimmed fallbackText when date isn't a usable Date, and to ''
+    // when neither is usable. Never throws on bad input.
+    function formatCommentTimestamp(date, fallbackText) {
+        if (date instanceof Date && !isNaN(date.getTime())) {
+            const y = date.getFullYear();
+            const m = pad2(date.getMonth() + 1);
+            const d = pad2(date.getDate());
+            const h = pad2(date.getHours());
+            const min = pad2(date.getMinutes());
+            return `${y}-${m}-${d} ${h}:${min}`;
+        }
+        return (fallbackText || '').trim();
+    }
+
+    // Shifts every ATX heading (# .. ######) down by a uniform delta so the
+    // shallowest one lands at minLevel, capped at 6 (there is no level-7
+    // heading). A clamp (level = max(level, minLevel)) would flatten
+    // hierarchy — a "## Overview" / "### Detail" pair would both become
+    // "#### ", losing the nesting between them. Shifting every level by the
+    // same delta keeps their relative depth intact. Tracks fenced code
+    // blocks (``` and ~~~, any fence length, with or without an info
+    // string) so a "# comment" inside a fence neither contributes to the
+    // shallowest-level scan nor gets shifted. ATX only: setext headings
+    // ("Title\n=====") are a known limitation and are not detected.
+    function demoteMarkdownHeadings(md, minLevel) {
+        if (typeof md !== 'string' || !md) return md || '';
+
+        const lines = md.split('\n');
+        const HEADING_RE = /^(#{1,6})(\s+.*)?$/;
+
+        function scanFences(onHeadingLevel) {
+            let fenceChar = null;
+            let fenceLen = 0;
+            lines.forEach(line => {
+                const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
+                if (fenceMatch) {
+                    const marker = fenceMatch[1];
+                    const char = marker[0];
+                    const len = marker.length;
+                    if (fenceChar === null) {
+                        // Opening fence.
+                        fenceChar = char;
+                        fenceLen = len;
+                    } else if (char === fenceChar && len >= fenceLen) {
+                        // Matching (or longer) closing fence.
+                        fenceChar = null;
+                        fenceLen = 0;
+                    }
+                    return;
+                }
+
+                if (fenceChar !== null) return;
+
+                const headingMatch = line.match(HEADING_RE);
+                if (!headingMatch) return;
+
+                onHeadingLevel(headingMatch[1].length);
+            });
+        }
+
+        let shallowest = null;
+        scanFences(level => {
+            if (shallowest === null || level < shallowest) shallowest = level;
+        });
+
+        if (shallowest === null) return md;
+
+        const delta = Math.max(0, minLevel - shallowest);
+        if (delta === 0) return md;
+
+        let fenceChar = null;
+        let fenceLen = 0;
+
+        const out = lines.map(line => {
+            const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
+            if (fenceMatch) {
+                const marker = fenceMatch[1];
+                const char = marker[0];
+                const len = marker.length;
+                if (fenceChar === null) {
+                    // Opening fence.
+                    fenceChar = char;
+                    fenceLen = len;
+                } else if (char === fenceChar && len >= fenceLen) {
+                    // Matching (or longer) closing fence.
+                    fenceChar = null;
+                    fenceLen = 0;
+                }
+                return line;
+            }
+
+            if (fenceChar !== null) return line;
+
+            const headingMatch = line.match(HEADING_RE);
+            if (!headingMatch) return line;
+
+            const level = headingMatch[1].length;
+            const newLevel = Math.min(6, level + delta);
+            return '#'.repeat(newLevel) + (headingMatch[2] || '');
+        });
+
+        return out.join('\n');
+    }
+
+    // Comments render in whatever order the DOM happens to give them, but
+    // Jira's own UI has a newest-first/oldest-first toggle for the thread —
+    // DOM order is therefore not trustworthy. Returns a NEW array (input is
+    // never mutated); comments with no parseable timestamp keep their
+    // original relative order and are placed after every dated one.
+    function sortCommentsChronologically(comments) {
+        if (!Array.isArray(comments)) return [];
+
+        const withDate = [];
+        const withoutDate = [];
+        comments.forEach(c => {
+            if (c && c.timestamp instanceof Date && !isNaN(c.timestamp.getTime())) {
+                withDate.push(c);
+            } else {
+                withoutDate.push(c);
+            }
+        });
+
+        withDate.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        return withDate.concat(withoutDate);
+    }
+
+    // --- Comment extraction ---
+
+    // Jira's comment markup churns across Jira Software/JSM, and even across
+    // releases of the same product, so we try several known testids in
+    // order rather than trusting a single one. First match wins per
+    // candidate, most specific first; see dedupeContainers() for how
+    // overlapping matches are collapsed into one comment.
+    const COMMENT_SELECTOR = [
+        '[data-testid^="issue-comment-base.ui.comment"]',
+        '[data-testid^="issue.activity.comment"]',
+        '[data-testid*="comment-container"]'
+    ].join(', ');
+
+    // Used only to tell "no comments matched" apart from "there is no
+    // comment section on this page", so the zero-match warning below fires
+    // solely when there is visibly something to have matched.
+    const COMMENT_SECTION_HINT_SELECTOR = [
+        '[data-testid*="activity-comment"]',
+        '[data-testid*="issue-comment"]',
+        '[data-testid*="comment-count"]',
+        '[data-testid*="activity-feed"]'
+    ].join(', ');
+
+    const LOAD_MORE_COMMENTS_PATTERN = /load more|show more|older comment/i;
+
+    // Drop any matched node that is contained by another matched node, so a
+    // comment matched by more than one selector candidate (or a wrapper and
+    // its own inner container) is only counted once. Same idea as the
+    // containment check used for the rich-text fallback fields above.
+    function dedupeContainers(nodes) {
+        return nodes.filter(node => !nodes.some(other => other !== node && other.contains(node)));
+    }
+
+    // Strip button/icon text the same way the issue title is cleaned up
+    // above, so the author name comes back plain.
+    function extractAuthorName(commentEl) {
+        const authorEl = commentEl.querySelector(
+            '[data-testid*="comment-header"] a, [data-testid*="author"], a[href*="/jira/people/"]'
+        );
+        if (!authorEl) return '';
+        const clone = authorEl.cloneNode(true);
+        clone.querySelectorAll('button, svg').forEach(el => el.remove());
+        return (clone.textContent || '').trim();
+    }
+
+    // Absolute timestamps only — never a relative "3 days ago" string, since
+    // that is meaningless once pasted into a static markdown file. A <time>
+    // element's datetime attribute is authoritative; failing that, Jira
+    // often carries the absolute date in a title/aria-label tooltip; visible
+    // text is the last, least reliable, resort.
+    function extractCommentTimestamp(commentEl) {
+        const timeEl = commentEl.querySelector('time');
+        let raw = '';
+        let text = '';
+
+        if (timeEl) {
+            raw = timeEl.getAttribute('datetime') || timeEl.getAttribute('title') || timeEl.getAttribute('aria-label') || '';
+            text = (timeEl.innerText || timeEl.textContent || '').trim();
+        }
+        if (!raw) {
+            const titled = commentEl.querySelector('[title*=":"], [aria-label*=":"]');
+            if (titled) raw = titled.getAttribute('title') || titled.getAttribute('aria-label') || '';
+        }
+        if (!text) {
+            const anyTime = commentEl.querySelector('time, [data-testid*="timestamp"], [data-testid*="created"]');
+            text = anyTime ? (anyTime.innerText || anyTime.textContent || '').trim() : '';
+        }
+
+        const parsed = raw ? new Date(raw) : null;
+        const validDate = parsed && !isNaN(parsed.getTime()) ? parsed : null;
+        return { date: validDate, text: text };
+    }
+
+    // Positive detection only: a comment is flagged restricted when a JSM
+    // internal-comment badge or a visibility-lock indicator is found.
+    // Absence of the marker leaves restricted false — we never assert
+    // "public" from silence, since a stale selector would otherwise
+    // mislabel a genuinely internal comment.
+    function isRestrictedComment(commentEl) {
+        const marker = commentEl.querySelector(
+            '[data-testid*="internal"], [data-testid*="restricted"], [data-testid*="visibility"], ' +
+            '[aria-label*="Internal" i], [aria-label*="restricted" i]'
+        );
+        return !!marker;
+    }
+
+    // Comment bodies embed images via short-lived, token-signed Atlassian
+    // Media URLs that 404 once the token expires, and media "cards" (files,
+    // videos) often carry no <img> at all. Replace every image/media card
+    // with a plain text marker instead of the raw (soon-dead) URL or a
+    // base64 inline copy. Runs on a detached clone so the live DOM is
+    // untouched.
+    function stripCommentMedia(container) {
+        const clone = container.cloneNode(true);
+        clone.querySelectorAll('img, [data-testid*="media-card"], [data-testid*="media-single"]').forEach(mediaEl => {
+            const name = mediaEl.getAttribute('alt') ||
+                        mediaEl.getAttribute('title') ||
+                        mediaEl.getAttribute('aria-label') ||
+                        mediaEl.getAttribute('data-filename') ||
+                        mediaEl.getAttribute('data-media-filename') ||
+                        '';
+            const marker = document.createTextNode(name ? `[image: ${name}]` : '[image]');
+            mediaEl.replaceWith(marker);
+        });
+        return clone;
+    }
+
+    function findCommentBody(commentEl) {
+        return commentEl.querySelector('.ak-renderer-document') ||
+               commentEl.querySelector(FIELD_VALUE_SELECTOR) ||
+               commentEl;
+    }
+
+    // Best-effort lookup of a comment's own Reply/Edit/Delete action row, so
+    // the per-comment copy button lands next to controls the comment already
+    // has instead of at the very bottom of a possibly-long comment body.
+    // Known testids are tried first; the Reply-button fallback below covers
+    // markup we haven't special-cased yet.
+    function findCommentActionRow(commentEl) {
+        const known = commentEl.querySelector(
+            '[data-testid*="comment-action"], [data-testid*="comment-footer"], [data-testid*="actions-group"]'
+        );
+        if (known) return known;
+
+        const controls = commentEl.querySelectorAll('button, [role="button"], a');
+        for (const el of controls) {
+            const text = (el.innerText || el.textContent || '').trim();
+            if (/^reply$/i.test(text)) return el.parentElement || null;
+        }
+        return null;
+    }
+
+    // --- Toast ---
+    // One reused container, reflowed on every call rather than recreated, so
+    // a rapid second copy doesn't stack duplicate toasts or leave a stale
+    // dismiss timer racing a fresh one.
+    let toastEl = null;
+    let toastTimer = null;
+    function showToast(message, isError) {
+        if (!document.body) return;
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.id = 'j2m-toast';
+            toastEl.setAttribute('role', 'status');
+            toastEl.setAttribute('aria-live', 'polite');
+            document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = message || '';
+        toastEl.classList.toggle('j2m-toast-error', !!isError);
+        toastEl.classList.add('j2m-toast-visible');
+
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+            toastEl.classList.remove('j2m-toast-visible');
+        }, 2000);
+    }
+
+    // Clipboard write with a legacy fallback. navigator.clipboard.writeText
+    // can reject when the tab lost focus or the page lacks the (unrequested,
+    // by design — see manifest) clipboard-write permission grant; the
+    // hidden-textarea + execCommand path covers that case. Throws only when
+    // both paths fail, so the caller can surface the failure instead of
+    // pretending the copy succeeded.
+    async function copyTextToClipboard(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return;
+        } catch (e) {
+            // fall through to legacy fallback below
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+
+        let ok = false;
+        try {
+            ok = document.execCommand('copy');
+        } catch (e) {
+            ok = false;
+        }
+        document.body.removeChild(textarea);
+
+        if (!ok) throw new Error('clipboard copy failed');
+    }
+
+    // Build and copy the markdown for a single comment. Scoped to commentEl
+    // (not document) when running the marker seam, so checkbox/strikethrough/
+    // colour fidelity is preserved for just this comment without mutating the
+    // rest of the page.
+    async function copyCommentAsMarkdown(commentEl) {
+        try {
+            const build = () => {
+                const author = extractAuthorName(commentEl) || 'Unknown';
+                const timestamp = extractCommentTimestamp(commentEl);
+                const bodyContainer = findCommentBody(commentEl);
+                const strippedBody = stripCommentMedia(bodyContainer);
+                const bodyMarkdown = convertFieldToMarkdown(strippedBody);
+                const formattedTimestamp = formatCommentTimestamp(timestamp.date, timestamp.text);
+                const restrictedTag = isRestrictedComment(commentEl) ? ' **[INTERNAL]**' : '';
+
+                // Deliberately NOT demoteMarkdownHeadings here, unlike the
+                // bundle export path. That demotion exists solely so a
+                // heading inside a comment body can't outrank the bundle's
+                // "## Comments" section heading. A single copied comment has
+                // no such parent heading to collide with, so its body keeps
+                // whatever heading levels the author used.
+                return `### ${author} — ${formattedTimestamp}${restrictedTag}\n\n${bodyMarkdown}`;
+            };
+
+            const md = (typeof window.__j2mWithMarkers === 'function')
+                ? window.__j2mWithMarkers(commentEl, build)
+                : build();
+
+            await copyTextToClipboard(md);
+            showToast('Comment copied as Markdown');
+        } catch (e) {
+            console.warn('[Jira2Markdown] Failed to copy comment: ' + e.message);
+            showToast('Could not copy comment', true);
+        }
+    }
+
+    // Adds a hover-revealed "Copy MD" button to every comment that doesn't
+    // already have one. Runs off the same debounced MutationObserver tick as
+    // injectButton() — see the observer at the bottom of this file — rather
+    // than a second observer.
+    function injectCommentButtons() {
+        let matched = [];
+        try {
+            matched = dedupeContainers(Array.from(document.querySelectorAll(COMMENT_SELECTOR)));
+        } catch (e) {
+            console.warn('[Jira2Markdown] Comment button selector failed: ' + e.message);
+            return;
+        }
+
+        matched.forEach(commentEl => {
+            try {
+                // The guard attribute lives on the button itself, which is
+                // always appended somewhere INSIDE commentEl (either its
+                // action row or, failing that, commentEl directly) — never
+                // on commentEl itself. Jira swaps a comment's whole subtree
+                // when it enters edit mode, so a guard on the root would
+                // outlive that swap and permanently block re-injection into
+                // the replacement subtree. Living inside the subtree, this
+                // guard dies with it instead.
+                if (commentEl.querySelector('[data-j2m-comment-btn]')) return;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'j2m-comment-copy-btn';
+                btn.setAttribute('data-j2m-comment-btn', '1');
+                btn.setAttribute('aria-label', 'Copy this comment as Markdown');
+                btn.title = 'Copy comment as Markdown';
+                btn.textContent = '📋';
+                btn.addEventListener('click', (e) => {
+                    // This sits inside Jira's own comment click handlers
+                    // (e.g. click-to-edit) — stop the event before it
+                    // reaches them.
+                    e.preventDefault();
+                    e.stopPropagation();
+                    copyCommentAsMarkdown(commentEl);
+                });
+
+                // Stable class on the varying comment root, so styles.css can
+                // key the hover-reveal rule off it without knowing which
+                // selector matched this particular comment.
+                commentEl.classList.add('j2m-has-copy-btn');
+
+                const actionRow = findCommentActionRow(commentEl);
+                if (actionRow) {
+                    actionRow.appendChild(btn);
+                } else {
+                    commentEl.appendChild(btn);
+                }
+            } catch (e) {
+                console.warn('[Jira2Markdown] Skipped injecting a comment button: ' + e.message);
+            }
+        });
+    }
+
+    // Best-effort detection of a still-present "Load more comments" control,
+    // so an export never silently claims completeness when Jira has only
+    // rendered the most recent page of a long thread.
+    function findLoadMoreComments(root) {
+        const candidates = root.querySelectorAll('button, [role="button"], a');
+        for (const el of candidates) {
+            const text = (el.innerText || el.textContent || '').trim();
+            if (text && LOAD_MORE_COMMENTS_PATTERN.test(text)) return text;
+        }
+        return null;
+    }
+
+    // Extract every visible comment into a plain object. Never throws:
+    // handleExport's own try/catch is the safety net for the whole export,
+    // but a comment-shaped page with unexpected markup should degrade to
+    // "no comments found" rather than take the rest of the export down.
+    function extractComments() {
+        let matched = [];
+        try {
+            matched = dedupeContainers(Array.from(document.querySelectorAll(COMMENT_SELECTOR)));
+        } catch (e) {
+            console.warn('[Jira2Markdown] Comment selector failed: ' + e.message);
+        }
+
+        const comments = [];
+        matched.forEach(commentEl => {
+            try {
+                const author = extractAuthorName(commentEl) || 'Unknown';
+                const timestamp = extractCommentTimestamp(commentEl);
+                const bodyContainer = findCommentBody(commentEl);
+                const strippedBody = stripCommentMedia(bodyContainer);
+                const bodyMarkdown = convertFieldToMarkdown(strippedBody);
+                if (isEmptyFieldValue(bodyMarkdown)) return;
+
+                comments.push({
+                    author: author,
+                    timestamp: timestamp.date,
+                    timestampText: timestamp.text,
+                    bodyMarkdown: bodyMarkdown,
+                    restricted: isRestrictedComment(commentEl)
+                });
+            } catch (e) {
+                console.warn('[Jira2Markdown] Skipped a comment due to error: ' + e.message);
+            }
+        });
+
+        // The extension already shipped a bug once where extraction
+        // "silently dropped" content (see the field-walk fallback above) —
+        // do not repeat it for comments. Only warn when the page visibly
+        // has a comment section but our selectors matched nothing in it.
+        let warning = '';
+        if (comments.length === 0) {
+            const hasCommentSection = !!document.querySelector(COMMENT_SECTION_HINT_SELECTOR);
+            if (hasCommentSection) {
+                warning = 'jira2md: 0 comments matched — comment selectors may be stale';
+                console.warn('[Jira2Markdown] ' + warning);
+            }
+        }
+
+        let loadMoreNotice = '';
+        const loadMoreText = findLoadMoreComments(document);
+        if (loadMoreText) {
+            loadMoreNotice = 'jira2md: older comments not loaded in the page were not exported';
+            const countMatch = loadMoreText.match(/\d+/);
+            if (countMatch) loadMoreNotice += ' (' + countMatch[0] + ')';
+        }
+
+        return { comments: sortCommentsChronologically(comments), warning: warning, loadMoreNotice: loadMoreNotice };
+    }
+
     // --- Main export flow ---
     async function handleExport() {
         if (!initTurndown()) return alert("Library loading...");
@@ -599,8 +1087,29 @@
                 fieldCount++;
             });
 
+            // --- Comments ---
+            // Kept separate from the field walk above: the comment thread
+            // lives in a distinct activity feed, not among the issue's
+            // fields, and needs its own author/timestamp handling plus a
+            // heading demotion (below) so a heading pasted inside a comment
+            // body can't outrank the comment's own attribution line.
+            const { comments, warning, loadMoreNotice } = extractComments();
+
+            if (comments.length > 0 || warning || loadMoreNotice) {
+                initialMarkdown += '\n\n## Comments\n';
+                if (loadMoreNotice) initialMarkdown += `\n<!-- ${loadMoreNotice} -->\n`;
+                if (warning) initialMarkdown += `\n\n<!-- ${warning} -->\n`;
+
+                comments.forEach(comment => {
+                    const formattedTimestamp = formatCommentTimestamp(comment.timestamp, comment.timestampText);
+                    const restrictedTag = comment.restricted ? ' **[INTERNAL]**' : '';
+                    const body = demoteMarkdownHeadings(comment.bodyMarkdown, 4);
+                    initialMarkdown += `\n\n### ${comment.author} — ${formattedTimestamp}${restrictedTag}\n\n${body}`;
+                });
+            }
+
             console.log('[Jira2Markdown] Final markdown length: ' + initialMarkdown.length +
-                        ' (' + fieldCount + ' extra fields)');
+                        ' (' + fieldCount + ' extra fields, ' + comments.length + ' comments)');
 
             showEditorModal(initialMarkdown, { key: issueKey, title: title, attachments: attachments });
 
@@ -624,11 +1133,31 @@
         }
     }
 
-    let timeout = null;
-    const observer = new MutationObserver(() => {
-        if (timeout) clearTimeout(timeout);
-        timeout = setTimeout(injectButton, 500);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(injectButton, 1000);
+    // Exposed so test/test.html can exercise the pure helpers above without
+    // a build step or DOM fixtures. Inert on a real Jira page — it only
+    // attaches function references, no DOM access happens here.
+    window.__j2mTestables = {
+        formatCommentTimestamp: formatCommentTimestamp,
+        demoteMarkdownHeadings: demoteMarkdownHeadings,
+        sortCommentsChronologically: sortCommentsChronologically
+    };
+
+    // Button injection + the observer that re-triggers it are meaningless
+    // off a real Jira issue page (e.g. when this file is loaded standalone
+    // by test/test.html), and document.body may not exist yet if the
+    // script runs from <head>. Guard so that case no-ops instead of
+    // throwing.
+    if (document.body) {
+        let timeout = null;
+        const runInjections = () => {
+            injectButton();
+            injectCommentButtons();
+        };
+        const observer = new MutationObserver(() => {
+            if (timeout) clearTimeout(timeout);
+            timeout = setTimeout(runInjections, 500);
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(runInjections, 1000);
+    }
 })();

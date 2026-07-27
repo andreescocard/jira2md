@@ -5,6 +5,8 @@ Convert any Jira issue to a clean Markdown file with one click. jira2md adds a f
 ## What it does
 
 - Extracts the issue title, description, comments, and attachments from the current Jira page
+  - Comments are exported as a `## Comments` section with one entry per comment (oldest-first), each with a hover-revealed "Copy MD" button for easy clipboard extraction
+  - Only comments currently loaded in the browser are included; if Jira shows a "load more" control, older comments are noted but not exported
 - Converts the HTML content to **GitHub Flavored Markdown** (GFM) — including tables, task lists, and strikethrough
 - Opens a **modal editor** with live preview so you can review and tweak the output before saving
 - Lets you download a standalone `.md` file or a `.zip` bundle that includes all linked attachments

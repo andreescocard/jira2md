@@ -522,16 +522,62 @@
         return (fallbackText || '').trim();
     }
 
-    // Shifts every ATX heading (# .. ######) so none outranks minLevel —
-    // i.e. every heading level is clamped to at least minLevel, capped at 6
-    // (there is no level-7 heading). Tracks fenced code blocks (``` and ~~~,
-    // any fence length, with or without an info string) so a "# comment"
-    // inside a fence is left untouched. ATX only: setext headings
+    // Shifts every ATX heading (# .. ######) down by a uniform delta so the
+    // shallowest one lands at minLevel, capped at 6 (there is no level-7
+    // heading). A clamp (level = max(level, minLevel)) would flatten
+    // hierarchy — a "## Overview" / "### Detail" pair would both become
+    // "#### ", losing the nesting between them. Shifting every level by the
+    // same delta keeps their relative depth intact. Tracks fenced code
+    // blocks (``` and ~~~, any fence length, with or without an info
+    // string) so a "# comment" inside a fence neither contributes to the
+    // shallowest-level scan nor gets shifted. ATX only: setext headings
     // ("Title\n=====") are a known limitation and are not detected.
     function demoteMarkdownHeadings(md, minLevel) {
         if (typeof md !== 'string' || !md) return md || '';
 
         const lines = md.split('\n');
+        const HEADING_RE = /^(#{1,6})(\s+.*)?$/;
+
+        function scanFences(onHeadingLevel) {
+            let fenceChar = null;
+            let fenceLen = 0;
+            lines.forEach(line => {
+                const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
+                if (fenceMatch) {
+                    const marker = fenceMatch[1];
+                    const char = marker[0];
+                    const len = marker.length;
+                    if (fenceChar === null) {
+                        // Opening fence.
+                        fenceChar = char;
+                        fenceLen = len;
+                    } else if (char === fenceChar && len >= fenceLen) {
+                        // Matching (or longer) closing fence.
+                        fenceChar = null;
+                        fenceLen = 0;
+                    }
+                    return;
+                }
+
+                if (fenceChar !== null) return;
+
+                const headingMatch = line.match(HEADING_RE);
+                if (!headingMatch) return;
+
+                onHeadingLevel(headingMatch[1].length);
+            });
+        }
+
+        let shallowest = null;
+        scanFences(level => {
+            if (shallowest === null || level < shallowest) shallowest = level;
+        });
+
+        if (shallowest === null) return md;
+
+        const delta = Math.max(0, minLevel - shallowest);
+        if (delta === 0) return md;
+
         let fenceChar = null;
         let fenceLen = 0;
 
@@ -555,11 +601,11 @@
 
             if (fenceChar !== null) return line;
 
-            const headingMatch = line.match(/^(#{1,6})(\s+.*)?$/);
+            const headingMatch = line.match(HEADING_RE);
             if (!headingMatch) return line;
 
             const level = headingMatch[1].length;
-            const newLevel = Math.min(6, Math.max(level, minLevel));
+            const newLevel = Math.min(6, level + delta);
             return '#'.repeat(newLevel) + (headingMatch[2] || '');
         });
 

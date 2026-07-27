@@ -110,6 +110,21 @@
             'plain text\nno headings here',
             'demoteMarkdownHeadings: text with no headings is unchanged'
         );
+        assertEq(
+            demoteMarkdownHeadings('## A\n### B', 4),
+            '#### A\n##### B',
+            'demoteMarkdownHeadings: shift preserves relative nesting (h2/h3 -> h4/h5, not both h4)'
+        );
+        assertEq(
+            demoteMarkdownHeadings('```\n# foo\n```\n##### bar', 4),
+            '```\n# foo\n```\n##### bar',
+            'demoteMarkdownHeadings: heading inside a fence does not factor into the computed delta'
+        );
+        assertEq(
+            demoteMarkdownHeadings('# X\n##### Y', 4),
+            '#### X\n###### Y',
+            'demoteMarkdownHeadings: delta that would push a heading past 6 is capped there'
+        );
 
         // --- sortCommentsChronologically ---
         (function() {

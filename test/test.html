@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>jira2md pure-function tests</title>
+<style>
+    body { font-family: -apple-system, Segoe UI, Arial, sans-serif; margin: 24px; background: #f4f5f7; color: #172b4d; }
+    h1 { font-size: 18px; }
+    #summary { font-weight: bold; margin: 12px 0; }
+    ul { list-style: none; padding: 0; }
+    li { padding: 6px 10px; margin: 4px 0; border-radius: 4px; font-family: monospace; font-size: 13px; }
+    li.pass { background: #e3fcef; color: #006644; }
+    li.fail { background: #ffebe6; color: #bf2600; }
+    .detail { display: block; margin-top: 4px; font-size: 12px; color: #5e6c84; }
+</style>
+</head>
+<body>
+<h1>jira2md pure-function tests</h1>
+<div id="summary">Running...</div>
+<ul id="results"></ul>
+
+<!--
+  content.js is a full content script (IIFE with DOM setup at the bottom).
+  It is loaded directly, unmodified, no build step. Its DOM-setup tail is
+  guarded to no-op when document.body isn't ready / this isn't a Jira page,
+  and it exposes the three pure helpers under test via
+  window.__j2mTestables so this page can assert on them without any test
+  framework, npm, or bundler.
+-->
+<script src="../content.js"></script>
+<script>
+(function() {
+    const results = [];
+    function assertEq(actual, expected, label) {
+        const a = JSON.stringify(actual);
+        const e = JSON.stringify(expected);
+        results.push({ pass: a === e, label: label, actual: a, expected: e });
+    }
+
+    function run() {
+        const T = window.__j2mTestables;
+        if (!T) {
+            results.push({ pass: false, label: 'window.__j2mTestables was not exposed by content.js', actual: 'undefined', expected: 'object' });
+            render();
+            return;
+        }
+
+        const { formatCommentTimestamp, demoteMarkdownHeadings, sortCommentsChronologically } = T;
+
+        // --- formatCommentTimestamp ---
+        assertEq(
+            formatCommentTimestamp(new Date(2024, 0, 5, 9, 3), 'fallback'),
+            '2024-01-05 09:03',
+            'formatCommentTimestamp: valid Date formats as YYYY-MM-DD HH:mm'
+        );
+        assertEq(
+            formatCommentTimestamp(new Date('not a date'), 'fallback text'),
+            'fallback text',
+            'formatCommentTimestamp: invalid Date falls back to trimmed text'
+        );
+        assertEq(
+            formatCommentTimestamp(new Date('not a date'), '   spaced   '),
+            'spaced',
+            'formatCommentTimestamp: fallback text is trimmed'
+        );
+        assertEq(
+            formatCommentTimestamp(new Date('not a date'), ''),
+            '',
+            'formatCommentTimestamp: neither Date nor text yields empty string'
+        );
+        assertEq(
+            formatCommentTimestamp(null, null),
+            '',
+            'formatCommentTimestamp: null/null yields empty string, never throws'
+        );
+
+        // --- demoteMarkdownHeadings ---
+        assertEq(
+            demoteMarkdownHeadings('# Title\ntext', 4),
+            '#### Title\ntext',
+            'demoteMarkdownHeadings: plain heading shift (h1 -> minLevel)'
+        );
+        assertEq(
+            demoteMarkdownHeadings('##### Already deep', 4),
+            '##### Already deep',
+            'demoteMarkdownHeadings: heading already at/below minLevel is left alone'
+        );
+        assertEq(
+            demoteMarkdownHeadings('```\n# foo\n```', 4),
+            '```\n# foo\n```',
+            'demoteMarkdownHeadings: heading inside a ``` fence is untouched'
+        );
+        assertEq(
+            demoteMarkdownHeadings('~~~\n# foo\n~~~', 4),
+            '~~~\n# foo\n~~~',
+            'demoteMarkdownHeadings: heading inside a ~~~ fence is untouched'
+        );
+        assertEq(
+            demoteMarkdownHeadings('```bash\n# a comment\n```\n# real heading', 4),
+            '```bash\n# a comment\n```\n#### real heading',
+            'demoteMarkdownHeadings: fence with an info string is respected, heading after fence still shifts'
+        );
+        assertEq(
+            demoteMarkdownHeadings('# a', 9),
+            '###### a',
+            'demoteMarkdownHeadings: clamps at 6 even if minLevel is requested higher'
+        );
+        assertEq(
+            demoteMarkdownHeadings('plain text\nno headings here', 4),
+            'plain text\nno headings here',
+            'demoteMarkdownHeadings: text with no headings is unchanged'
+        );
+
+        // --- sortCommentsChronologically ---
+        (function() {
+            const c1 = { id: 1, timestamp: new Date(2024, 0, 3) };
+            const c2 = { id: 2, timestamp: new Date(2024, 0, 1) };
+            const c3 = { id: 3, timestamp: new Date(2024, 0, 2) };
+            const c4 = { id: 4, timestamp: null };
+            const c5 = { id: 5, timestamp: null };
+            const input = [c1, c2, c4, c3, c5];
+            const sorted = sortCommentsChronologically(input);
+
+            assertEq(
+                sorted.map(c => c.id),
+                [2, 3, 1, 4, 5],
+                'sortCommentsChronologically: ascending by timestamp, unparseable timestamps last, relative order preserved'
+            );
+            assertEq(
+                input.map(c => c.id),
+                [1, 2, 4, 3, 5],
+                'sortCommentsChronologically: does not mutate the input array'
+            );
+        })();
+
+        render();
+    }
+
+    function render() {
+        const list = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        let failCount = 0;
+
+        results.forEach(r => {
+            if (!r.pass) failCount++;
+            const li = document.createElement('li');
+            li.className = r.pass ? 'pass' : 'fail';
+            li.textContent = (r.pass ? 'PASS - ' : 'FAIL - ') + r.label;
+            if (!r.pass) {
+                const detail = document.createElement('span');
+                detail.className = 'detail';
+                detail.textContent = 'got ' + r.actual + ', expected ' + r.expected;
+                li.appendChild(detail);
+            }
+            list.appendChild(li);
+        });
+
+        if (failCount === 0) {
+            summary.textContent = `All ${results.length} tests passed.`;
+            document.title = 'PASS';
+        } else {
+            summary.textContent = `${failCount} of ${results.length} tests failed.`;
+            document.title = 'FAIL ' + failCount;
+        }
+    }
+
+    run();
+})();
+</script>
+</body>
+</html>
